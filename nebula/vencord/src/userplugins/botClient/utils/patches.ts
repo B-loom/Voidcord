@@ -4,11 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { Logger } from "@utils/Logger";
 import { findStoreLazy } from "@webpack";
-import { ChannelStore, Constants, FluxDispatcher, RestAPI, UserStore } from "@webpack/common";
+import { ChannelStore, Constants, FluxDispatcher, RestAPI, showToast, UserStore } from "@webpack/common";
 
 import { originalSessionStorage } from "./common";
-import { Toasts } from "./toasts";
+
+const logger = new Logger("NebulaPasserelle", "#f5bde6");
 
 // Vencord.Webpack.findByProps('getSocket').getSocket()
 const GatewayConnectionStore: {
@@ -81,7 +83,7 @@ export function voiceStateUpdatePatch(data: {
         // Switching VoiceChannel
         if (data.guildId !== latestGuildIdVoiceConnect) {
             // Send Disconnect for previous Guild
-            callback(4, {
+            if (latestGuildIdVoiceConnect !== "0") callback(4, {
                 guild_id: latestGuildIdVoiceConnect,
                 channel_id: null,
                 self_mute: data.selfMute,
@@ -100,6 +102,12 @@ export function voiceStateUpdatePatch(data: {
 
 export function handleClosePatch(event: any, closeCode: number, reason: string) {
     /*
+     * Chaque fermeture de la passerelle laisse une trace dans le journal de Nebula
+     * (%APPDATA%\Nebula\logs\main.log). Sans ça, une déconnexion « sans raison »
+     * n'en laisse aucune, et il ne reste plus qu'à formuler des hypothèses.
+     */
+    logger.info(`Passerelle fermée : code ${closeCode}${reason ? ` (${reason})` : ""}`);
+    /*
      * 4004 means the token was refused or withdrawn, which is also what a logout looks
      * like. Leaving the flag set would keep the client in "user account" mode while no
      * account is signed in, and the patches that branch on it would read a session that
@@ -107,17 +115,15 @@ export function handleClosePatch(event: any, closeCode: number, reason: string) 
      */
     if (closeCode === 4004) userAccountSession = false;
     if (closeCode === 4013) {
-        Toasts.show({
-            message: "Login Failure: Invalid intent(s), Logout...",
-            id: Toasts.genId(),
-            type: Toasts.Type.FAILURE,
+        showToast({
+            text: "Connexion refusée : intent invalide. Déconnexion…",
+            variant: "critical",
         });
         closeCode = 4004;
     } else if (closeCode === 4014) {
-        Toasts.show({
-            message: "Login Failure: Disallowed intent(s), Logout...",
-            id: Toasts.genId(),
-            type: Toasts.Type.FAILURE,
+        showToast({
+            text: "Connexion refusée : intent non autorisé. Déconnexion…",
+            variant: "critical",
         });
         closeCode = 4004;
     }
@@ -125,6 +131,10 @@ export function handleClosePatch(event: any, closeCode: number, reason: string) 
 }
 
 export function handleDispatchPatch(data: any, eventName: string, n: any, receiveDispatch: (data: any, eventName: string, n: any) => void, self: any) {
+    // Bot GUILD_CREATE already includes every visible active thread, including an empty list.
+    if (eventName === "GUILD_CREATE" && !data.unavailable && Array.isArray(data.threads)) {
+        data.has_threads_subscription = true;
+    }
     if (eventName === "MESSAGE_CREATE" && !data.guild_id && !ChannelStore.getChannel(data.channel_id)) {
         RestAPI.get({
             url: Constants.Endpoints.CHANNEL(data.channel_id),
@@ -169,23 +179,15 @@ export function handleDispatchPatch(data: any, eventName: string, n: any, receiv
             activities,
             afk: false
         });
-        // Patch fixPreloadedUserSettings
-        self.fixPreloadedUserSettings();
         // Application Emojis
         self.getApplicationEmojis();
     }
     if (eventName === "READY") {
         self.console.log("[Client]: Ready event", data);
-        // Experiments
-        // ! todo: fix me
+        // IDs are needed only by legacy name-keyed experiment snapshots.
         const experiments = Object.entries(ExperimentStore.getRegisteredExperiments())
-            .map(([id, data]) => ({ id, ...data }))
-            .sort((a, b) => {
-                const titleA = a.title.toLowerCase();
-                const titleB = b.title.toLowerCase();
-                return titleA < titleB ? -1 : titleA > titleB ? 1 : 0;
-            })
-            .filter(exp => exp.type === "user");
+            .filter(([, data]) => data.type === "user")
+            .map(([id]) => ({ id }));
 
         // Private Channels
         const defaultPrivateChannel = window.BotClientNative.getPrivateChannelDefault();
@@ -311,10 +313,9 @@ export async function doIdentifyFirstPatch(token: string, self: any, handleClose
     const botInfo = await window.BotClientNative.getBotInfo(token);
     self.console.log("[Electron > Client] Discord Bot metadata", botInfo);
     if (!botInfo.success) {
-        Toasts.show({
-            message: `Login Failure: ${botInfo.message}`,
-            id: Toasts.genId(),
-            type: Toasts.Type.FAILURE,
+        showToast({
+            text: `Login Failure: ${botInfo.message}`,
+            variant: "critical",
         });
         handleCloseCallback(true, 4004, botInfo.message);
         return null;
@@ -328,15 +329,13 @@ export async function doIdentifyFirstPatch(token: string, self: any, handleClose
     // Reset Voice State
     latestGuildIdVoiceConnect = "0";
     self.console.log(`[Client > Electron] Bot Intents: ${intents} Shard ID: ${originalSessionStorage.getItem("currentShard")} (All: ${botInfo.allShards} )`);
-    Toasts.show({
-        message: `Bot Intents: ${intents}`,
-        id: Toasts.genId(),
-        type: Toasts.Type.SUCCESS,
+    showToast({
+        text: `Bot Intents: ${intents}`,
+        variant: "success",
     });
-    Toasts.show({
-        message: `Shard ID: ${originalSessionStorage.getItem("currentShard")} (All: ${botInfo.allShards})`,
-        id: Toasts.genId(),
-        type: Toasts.Type.SUCCESS,
+    showToast({
+        text: `Shard ID: ${originalSessionStorage.getItem("currentShard")} (All: ${botInfo.allShards})`,
+        variant: "success",
     });
     return botInfo;
 }
@@ -347,18 +346,16 @@ export async function openPrivateChannelPatch(e: any, this_args: any, self: any)
     const userId = l[0];
     if (!userId) {
         self.console.error("Cannot open private channel without user ID", e, l);
-        Toasts.show({
-            message: "Cannot open private channel without user ID",
-            id: Toasts.genId(),
-            type: Toasts.Type.FAILURE,
+        showToast({
+            text: "Cannot open private channel without user ID",
+            variant: "critical",
         });
         return null;
     }
     if (UserStore.getUser(userId)?.bot) {
-        Toasts.show({
-            message: "Cannot send messages to this bot",
-            id: Toasts.genId(),
-            type: Toasts.Type.FAILURE,
+        showToast({
+            text: "Cannot send messages to this bot",
+            variant: "critical",
         });
         return null;
     }

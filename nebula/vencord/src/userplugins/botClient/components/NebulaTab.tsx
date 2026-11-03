@@ -8,7 +8,9 @@ import "./NebulaTab.css";
 import { openAccountModal } from "./AccountModal";
 
 import { classNameFactory } from "@utils/css";
-import { Button, Forms, React } from "@webpack/common";
+import { React } from "@webpack/common";
+
+import { Button, Forms } from "./legacyUi";
 
 import { isUserAccountSession } from "../utils/patches";
 import { CHANGELOG, README } from "./docs";

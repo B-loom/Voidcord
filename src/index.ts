@@ -57,11 +57,10 @@ hooks.push((message, transport) => {
     if (
         message.scope !== "Renderer" &&
         app.isReady() &&
-        botClient?.win &&
-        !botClient?.win.isDestroyed() &&
-        botClient?.win.webContents
+        botClient?.discordWebContents &&
+        !botClient.discordWebContents.isDestroyed()
     ) {
-        botClient.win.webContents.send(
+        botClient.discordWebContents.send(
             IPCEvent.LogFromMainProcess,
             message.scope,
             ["error", "warn", "log"].includes(message.level) ? message.level : "debug",

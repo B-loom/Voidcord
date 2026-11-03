@@ -8,12 +8,14 @@ import "./ContributorModal.css";
 
 import { useSettings } from "@api/Settings";
 import { Link } from "@components/Link";
+import { Paragraph } from "@components/Paragraph";
+import { Span } from "@components/Span";
 import { DevsById } from "@utils/constants";
 import { classNameFactory } from "@utils/css";
 import { fetchUserProfile } from "@utils/discord";
 import { classes, pluralise } from "@utils/misc";
 import { RenderModalProps, User } from "@vencord/discord-types";
-import { Forms, Modal, openModal, showToast, useEffect, useMemo, UserProfileStore, useStateFromStores } from "@webpack/common";
+import { Modal, openModal, showToast, useEffect, useMemo, UserProfileStore, useStateFromStores } from "@webpack/common";
 
 import Plugins from "~plugins";
 
@@ -80,7 +82,7 @@ function ContributorModal({ user, modalProps }: { user: User; modalProps: Render
                                 alt=""
                             />
                         )}
-                    <Forms.FormTitle tag="h2" className={cl("name")}>{user.username}</Forms.FormTitle>
+                    <Span size="lg" weight="semibold" className={cl("name")}>{user.username}</Span>
 
                     <div className={classes("vc-settings-modal-links", cl("links"))}>
                         {website && (
@@ -101,20 +103,20 @@ function ContributorModal({ user, modalProps }: { user: User; modalProps: Render
             subtitle={
                 isNebula
                     ? (
-                        <Forms.FormText>
+                        <Paragraph>
                             Les plugins écrits pour Nebula, le client que tu utilises.
-                        </Forms.FormText>
+                        </Paragraph>
                     )
                     : plugins.length
                         ? (
-                            <Forms.FormText>
+                            <Paragraph>
                                 Cette personne a {ContributedHyperLink} à {pluralise(plugins.length, "plugin")}.
-                            </Forms.FormText>
+                            </Paragraph>
                         )
                         : (
-                            <Forms.FormText>
+                            <Paragraph>
                                 Cette personne n’a écrit aucun plugin. Elle a sans doute {ContributedHyperLink} à Vencord autrement.
-                            </Forms.FormText>
+                            </Paragraph>
                         )
             }
         >

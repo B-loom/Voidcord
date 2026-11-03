@@ -10,7 +10,9 @@ import ErrorBoundary from "@components/ErrorBoundary";
 import { classNameFactory } from "@utils/css";
 import { Logger } from "@utils/Logger";
 import { closeModal, ModalContent, ModalFooter, ModalHeader, ModalRoot, ModalSize, openModal } from "@utils/modal";
-import { Button, Forms, React } from "@webpack/common";
+import { React } from "@webpack/common";
+
+import { Button, Forms } from "./legacyUi";
 
 const cl = classNameFactory("vc-nebula-share-");
 const logger = new Logger("NebulaPartage", "#f5bde6");
@@ -26,6 +28,56 @@ function native() {
     return (window as any).BotClientNative;
 }
 
+const RESOLUTIONS = [
+    { label: "720p", hauteur: 720 },
+    { label: "1080p", hauteur: 1080 },
+    { label: "1440p", hauteur: 1440 },
+    { label: "Source", hauteur: 0 },
+] as const;
+
+const IMAGES_PAR_SECONDE = [15, 30, 60] as const;
+
+export type Qualite = { hauteur: number; fps: number; };
+
+const CLE = "nebula-partage-qualite";
+
+/** Le dernier choix, relu au prochain partage plutôt que redemandé à zéro */
+export function qualiteRetenue (): Qualite {
+    try {
+        const brut = JSON.parse(localStorage.getItem(CLE) || "");
+        if (typeof brut?.hauteur === "number" && typeof brut?.fps === "number") return brut;
+    } catch {
+        // Un stockage vide ou abîmé n'est pas une raison de ne pas partager
+    }
+    return { hauteur: 1080, fps: 30 };
+}
+
+function retenirQualite (qualite: Qualite) {
+    try {
+        localStorage.setItem(CLE, JSON.stringify(qualite));
+    } catch {
+        // Tant pis : le partage en cours garde quand même le choix
+    }
+}
+
+/*
+ * Electron rend un flux à la définition et à la cadence de l'écran capturé. Les
+ * contraintes sont donc posées sur la piste une fois qu'elle existe. Discord réencode
+ * ensuite pour la voix : ce choix est un plafond, pas une garantie.
+ */
+export async function appliquerQualite (flux: MediaStream, qualite: Qualite) {
+    const piste = flux.getVideoTracks()[0];
+    if (!piste) return;
+    const contraintes: MediaTrackConstraints = { frameRate: { ideal: qualite.fps, max: qualite.fps } };
+    if (qualite.hauteur > 0) contraintes.height = { ideal: qualite.hauteur, max: qualite.hauteur };
+    try {
+        await piste.applyConstraints(contraintes);
+        logger.info(`Partage limité à ${qualite.hauteur || "la source"}${qualite.hauteur ? "p" : ""} à ${qualite.fps} images/s`);
+    } catch (error) {
+        logger.warn("La qualité demandée n'a pas pu être appliquée", error);
+    }
+}
+
 function Picker({ sources, onChoose, close }: {
     sources: Source[];
     onChoose: (id: string | null, audio: boolean) => void;
@@ -34,10 +86,12 @@ function Picker({ sources, onChoose, close }: {
     const [kind, setKind] = React.useState<"screen" | "window">("screen");
     const [chosen, setChosen] = React.useState<string | null>(null);
     const [audio, setAudio] = React.useState(true);
+    const [qualite, setQualite] = React.useState<Qualite>(qualiteRetenue);
 
     const shown = sources.filter(source => source.kind === kind);
 
     const share = (id: string | null) => {
+        if (id) retenirQualite(qualite);
         onChoose(id, audio);
         close();
     };
@@ -88,6 +142,32 @@ function Picker({ sources, onChoose, close }: {
                         ))}
                     </div>
                 )}
+                <div className={cl("quality")}>
+                    <div className={cl("quality-row")}>
+                        <span className={cl("quality-label")}>Qualité</span>
+                        {RESOLUTIONS.map(entry => (
+                            <button
+                                key={entry.label}
+                                className={cl(entry.hauteur === qualite.hauteur ? "chip-current" : "chip")}
+                                onClick={() => setQualite({ ...qualite, hauteur: entry.hauteur })}
+                            >
+                                {entry.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className={cl("quality-row")}>
+                        <span className={cl("quality-label")}>Images/s</span>
+                        {IMAGES_PAR_SECONDE.map(fps => (
+                            <button
+                                key={fps}
+                                className={cl(fps === qualite.fps ? "chip-current" : "chip")}
+                                onClick={() => setQualite({ ...qualite, fps })}
+                            >
+                                {fps}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </ModalContent>
 
             <ModalFooter>
@@ -111,8 +191,27 @@ function Picker({ sources, onChoose, close }: {
  * to come back exactly once: Electron is holding the request open until it does, so
  * closing the window without choosing counts as a refusal.
  */
+/*
+ * La qualité ne peut se poser qu'une fois la piste créée : Electron rend l'écran tel
+ * quel, à sa définition et à sa cadence. L'appel de Discord est donc enveloppé, pour
+ * appliquer le choix du sélecteur juste après — le sélecteur, lui, a déjà écrit ce
+ * choix au moment où l'on a cliqué sur « Partager ».
+ */
+function installerQualite() {
+    const media = navigator.mediaDevices as any;
+    if (!media?.getDisplayMedia || media.__nebulaQualite) return;
+    const original = media.getDisplayMedia.bind(media);
+    media.getDisplayMedia = async (contraintes: any) => {
+        const flux = await original(contraintes);
+        await appliquerQualite(flux, qualiteRetenue());
+        return flux;
+    };
+    media.__nebulaQualite = true;
+}
+
 export function listenForScreenShare() {
     try {
+        installerQualite();
         native()?.onScreenShareSources?.((sources: Source[]) => {
             let answered = false;
             const answer = (id: string | null, audio: boolean) => {

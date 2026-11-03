@@ -10,7 +10,9 @@ import ErrorBoundary from "@components/ErrorBoundary";
 import { classNameFactory } from "@utils/css";
 import { Logger } from "@utils/Logger";
 import { closeModal, ModalContent, ModalFooter, ModalHeader, ModalRoot, ModalSize, openModal } from "@utils/modal";
-import { Button, Forms, React, TextInput } from "@webpack/common";
+import { React, TextInput } from "@webpack/common";
+
+import { Button, Forms } from "./legacyUi";
 
 const cl = classNameFactory("vc-nebula-account-");
 const logger = new Logger("NebulaComptes", "#f5bde6");
@@ -90,13 +92,24 @@ function AccountModal({ close }: { close: () => void; }) {
         }
     };
 
+    /*
+     * Electron habille ce que le processus principal a lancé : « Error invoking remote
+     * method 'app:account:login': Error: ... ». Seule la fin intéresse la personne qui
+     * lit, et le reste est en anglais.
+     */
+    const readableError = (e: unknown) => {
+        const raw = String((e as Error)?.message ?? e);
+        const stripped = raw.replace(/^Error invoking remote method '[^']*':\s*/, "").replace(/^Error:\s*/, "");
+        return stripped || "La connexion a échoué.";
+    };
+
     const run = async (work: () => Promise<AuthResult>) => {
         setBusy(true);
         try {
             await handle(await work());
         } catch (e) {
             logger.error("Échec de la connexion", e);
-            setError(String((e as Error)?.message ?? e));
+            setError(readableError(e));
         } finally {
             setBusy(false);
         }

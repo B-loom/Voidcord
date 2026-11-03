@@ -24,7 +24,7 @@ div:has(> a[href$="/channels/@me/1000000000000000000"]) > [class*="closeButton"]
 /* Headings separating user accounts from bots in the account switcher */
 .nebula-account-group {
     margin: 12px 0 4px;
-    color: var(--header-secondary);
+    color: var(--header-secondary, var(--text-muted, #b5bac1));
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -59,14 +59,14 @@ div:has(> a[href$="/channels/@me/1000000000000000000"]) > [class*="closeButton"]
 
 .nebula-blocked-title {
     margin: 0;
-    color: var(--header-primary);
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
     font-size: 24px;
     font-weight: 700;
 }
 
 .nebula-blocked-body {
     max-width: 520px;
-    color: var(--text-muted);
+    color: var(--text-muted, var(--text-subtle, #949ba4));
     font-size: 16px;
     line-height: 1.4;
 }
@@ -135,4 +135,13 @@ div:has(> a[href$="/channels/@me/1000000000000000000"]) > [class*="closeButton"]
     padding: 48px 40px;
     background: var(--background-primary, #313338);
     text-align: center;
+}
+
+/*
+ * Micro coupé, Discord peint le bouton et son chevron d'un pavé rouge en bas à gauche.
+ * L'icône barrée dit déjà que le micro est coupé. Le survol garde sa réaction : seule la
+ * teinte permanente s'en va.
+ */
+[class*="panels_"] [class*="redGlow"]:not(:hover) {
+    background-color: transparent !important;
 }

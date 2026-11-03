@@ -1,17 +1,16 @@
 /* Copyright Elysia © 2025. All rights reserved */
 
 import { randomUUID } from "crypto";
-import { clipboard,
+import {
+    clipboard,
     app,
     BrowserWindow,
     dialog,
     ipcMain,
     Menu,
-    MessageChannelMain,
     Notification,
     NotificationConstructorOptions,
     powerMonitor,
-    protocol,
     screen,
     session,
     shell,
@@ -27,13 +26,15 @@ import GameDetection from "src/AppUtils/GameDetection";
 import { installScreenShare } from "src/AppUtils/ScreenShare";
 import Util from "src/AppUtils/Utils";
 
-import server from "./APIServer";
+import server, { isLocalServerCertificate } from "./APIServer";
 import GlobalConfig from "./Config";
 import Constants from "./Constants";
 import { IPCEvent } from "./IPCEvents";
-import { setupIPCEvents } from "./IPCManager";
-import messageEditor from "./MessageEditorServer";
+import { isAllowedPopoutURL, setupIPCEvents } from "./IPCManager";
 import UserAuth from "./UserAuth";
+import { MessageEditorWindow } from "./Windows/MessageEditorWindow";
+import { SettingsWindow } from "./Windows/SettingsWindow";
+import { StartupWindow } from "./Windows/StartupWindow";
 
 /**
  * Discord asks its own CDN for the system user's pictures, Nebula's badge and the two
@@ -68,30 +69,56 @@ function inviteCodeFrom (url: string) {
     return match?.[1] ?? null;
 }
 
+/**
+ * Ce que le processus principal répond à une demande de permission venue du client.
+ *
+ * Sorti de la fenêtre pour être vérifiable : le partage d'écran est déjà mort une fois
+ * parce que cette décision avait changé sans que rien ne le signale. Un test l'épingle
+ * maintenant, cas par cas.
+ */
+export type PermissionDecision = "accorde" | "refuse" | "micro";
+
+export function decidePermission (permission: string, details: { mediaTypes?: string[] }): PermissionDecision {
+    if (["notifications", "fullscreen", "clipboard-sanitized-write", "loopback-network"].includes(permission)) {
+        return "accorde";
+    }
+    if (permission !== "media" || !Array.isArray(details.mediaTypes)) return "refuse";
+    /*
+     * Le partage d'écran arrive en "media" avec une liste de types **vide** : la caméra
+     * annonce "video", le micro "audio", lui n'annonce rien. C'est à cette demande-là,
+     * et à elle seule, que répond ensuite le sélecteur de ScreenShare.ts, qui ne
+     * transmet que la source choisie.
+     */
+    if (details.mediaTypes.length === 0) return "accorde";
+    // Le micro seul. La caméra reste refusée, qu'elle vienne seule ou avec le micro.
+    if (details.mediaTypes.includes("audio") && !details.mediaTypes.includes("video")) return "micro";
+    return "refuse";
+}
+
 export class DiscordBotClient extends EventEmitter {
     logger = scope(Constants.AppName);
     #shouldQuitApp = false;
-    win!: BrowserWindow;
+    private startupWindow?: StartupWindow;
+    appWindow!: BrowserWindow;
+    // Discord currently lives in the app window; callers must target its contents explicitly.
+    discordWebContents!: Electron.WebContents;
     tray!: Tray;
     port!: number;
-    customSession?: Electron.Session;
+    private customDiscordSession?: Electron.Session;
     childWindows = new Map<string, BrowserWindow>();
-    editorWindow?: BrowserWindow;
     accountWindow?: BrowserWindow;
     /** One extra client window per account, keyed by account id */
     accountWindows = new Map<string, BrowserWindow>();
     /** The client window that asked for the login window, and that the account belongs to */
     accountLoginTarget?: BrowserWindow;
+    private settingsWindow?: SettingsWindow;
     config = GlobalConfig;
     ipcMain = ipcMain;
-
-    // Beta Features
-    messageEditorPort!: number;
 
     constructor () {
         super();
         this.logger.log("App starting...");
-        this.initApp();
+        void this.initApp().catch(error => this.startupFailed(error));
     }
     initTray (menu: Electron.Menu) {
         if (!this.tray) {
@@ -99,7 +126,7 @@ export class DiscordBotClient extends EventEmitter {
         }
         this.tray.setToolTip(`${Constants.AppName} v${app.getVersion()}`);
         this.tray.on("click", () => {
-            this.win.show();
+            this.showApp();
         });
         this.tray.setContextMenu(menu);
     }
@@ -140,7 +167,7 @@ export class DiscordBotClient extends EventEmitter {
             {
                 label: "Recharger",
                 click: () => {
-                    this.win.reload();
+                    this.discordWebContents.reload();
                 },
             },
             {
@@ -164,15 +191,15 @@ export class DiscordBotClient extends EventEmitter {
                 },
             },
             {
-                label: "Paramètres (éditeur de configuration)",
+                label: "Paramètres",
                 click: () => {
-                    this.openConfigEditorWindow();
+                    this.openSettingsWindow();
                 },
             },
             {
                 label: "Supprimer toutes les données et redémarrer",
                 click: async () => {
-                    const result = await dialog.showMessageBox(this.win, {
+                    const result = await dialog.showMessageBox(this.appWindow, {
                         type: "warning",
                         buttons: ["Annuler", "Supprimer et redémarrer"],
                         defaultId: 0,
@@ -180,19 +207,19 @@ export class DiscordBotClient extends EventEmitter {
                         title: "Confirmer la suppression des données",
                         message: "Es-tu sûr de vouloir supprimer toutes les données de l’application ?",
                         detail:
-                            "The following data will be permanently deleted:\n" +
-                            "\n• Discord HTTP request cache" +
-                            "\n• Data stored in session cache (cleared by clearCache)" +
-                            "\n• Data stored in browser storage (cleared by clearStorageData)" +
-                            "\n• Local databases: PrivateChannel, UserSetting, Frequency" +
-                            "\n\nAll saved settings and cached data will be lost. This action cannot be undone.",
+                            "Seront définitivement supprimés :\n" +
+                            "\n• le cache des requêtes HTTP de Discord" +
+                            "\n• les données du cache de session" +
+                            "\n• les données du stockage du navigateur" +
+                            "\n• les bases locales : messages privés, réglages, fréquences" +
+                            "\n\nTous les réglages enregistrés et les données en cache seront perdus. C’est irréversible.",
                     });
 
                     if (result.response === 1) {
                         try {
-                            await this.win.webContents.session.clearCache();
-                            await this.win.webContents.session.flushStorageData();
-                            await this.win.webContents.session.clearStorageData({
+                            await this.discordSession.clearCache();
+                            await this.discordSession.flushStorageData();
+                            await this.discordSession.clearStorageData({
                                 storages: [
                                     "cookies",
                                     "filesystem",
@@ -216,7 +243,7 @@ export class DiscordBotClient extends EventEmitter {
             {
                 label: "Afficher/masquer les DevTools",
                 click: () => {
-                    this.win.webContents.toggleDevTools();
+                    this.discordWebContents.toggleDevTools();
                 },
             },
             {
@@ -231,13 +258,9 @@ export class DiscordBotClient extends EventEmitter {
     }
     async initApp () {
         this.port = await server();
-        this.messageEditorPort = await messageEditor();
         app.setAppUserModelId(Constants.AppID);
         const enabledFeatures = new Set(app.commandLine.getSwitchValue("enable-features").split(","));
         const disabledFeatures = new Set(app.commandLine.getSwitchValue("disable-features").split(","));
-        // Allow Localhost SSL
-        app.commandLine.appendSwitch("allow-insecure-localhost", "true");
-        app.commandLine.appendSwitch("ignore-certificate-errors");
         app.commandLine.appendSwitch("host-rules", `MAP ${Constants.CustomDiscordDomain} 127.0.0.1:${this.port}`);
         // Vesktop
         // Disable renderer backgrounding to prevent the app from unloading when in the background
@@ -246,8 +269,8 @@ export class DiscordBotClient extends EventEmitter {
         app.commandLine.appendSwitch("disable-renderer-backgrounding");
         app.commandLine.appendSwitch("disable-background-timer-throttling");
         app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
-        // Disable proxy
-        app.commandLine.appendSwitch("no-proxy-server");
+        // Keep direct connections by default; opt in to the OS proxy after restart.
+        if (!this.config.config.use_system_proxy) app.commandLine.appendSwitch("no-proxy-server");
         // Discord falls back to the browser locale when the account has none (bot accounts),
         // so the client speaks French out of the box
         app.commandLine.appendSwitch("lang", Constants.DefaultLocale);
@@ -284,10 +307,7 @@ export class DiscordBotClient extends EventEmitter {
         });
 
         app.on("second-instance", (event, commandLine, workingDirectory, additionalData) => {
-            const myWindow = BrowserWindow.getAllWindows()?.[0];
-            if (myWindow) {
-                myWindow.show();
-            }
+            this.showApp();
         });
 
         // Patch UserAgent (Switch Plan B SDP > Unified Plan)
@@ -300,50 +320,58 @@ export class DiscordBotClient extends EventEmitter {
             this.#shouldQuitApp = true;
             app.quit();
         } else {
-            protocol.registerSchemesAsPrivileged([
-                {
-                    scheme: "https",
-                    privileges: {
-                        standard: true,
-                        bypassCSP: true,
-                        allowServiceWorkers: true,
-                        supportFetchAPI: true,
-                        corsEnabled: true,
-                        stream: true,
-                    },
-                },
-            ]);
-            app.whenReady().then(async () => {
-                this.logger.info("Creating session...");
-                this.customSession = session.fromPartition("persist:elysia_dbc");
-                installScreenShare(this.customSession, this.logger);
-                // Enable DoH (Cloudflare)
-                app.configureHostResolver({
-                    enableBuiltInResolver: true,
-                    secureDnsMode: "secure",
-                    enableHappyEyeballs: true,
-                    enableAdditionalDnsQueryTypes: true,
-                    secureDnsServers: ["https://cloudflare-dns.com/dns-query"],
-                });
-                this.createWindow();
-                /*
-                 * The releases now come from Nebula's own repository, so looking for one
-                 * is safe again. It waits for the window: the notification is for the
-                 * person reading it, not for a client still starting up.
-                 */
-                setTimeout(() => {
-                    this.checkingForUpdates().catch(e => {
-                        this.logger.error("Recherche de mise à jour impossible:", e);
+            void app
+                .whenReady()
+                .then(async () => {
+                    this.startupWindow = new StartupWindow(
+                        () => this.relaunch(),
+                        () => this.quit(),
+                        this.config.config.startup_animation,
+                    );
+                    this.logger.info("Creating session...");
+                    this.customDiscordSession = session.fromPartition("persist:elysia_dbc");
+                    installScreenShare(this.customDiscordSession, this.logger);
+                    this.customDiscordSession.setCertificateVerifyProc(({ hostname, certificate }, callback) => {
+                        // Never load the real remote site into DBC if a system proxy bypasses host-rules.
+                        if (hostname === Constants.CustomDiscordDomain) return callback(isLocalServerCertificate(certificate.data) ? 0 : -2);
+                        if (hostname === "localhost" && isLocalServerCertificate(certificate.data)) return callback(0);
+                        callback(-3);
                     });
-                }, 10_000).unref();
-                app.on("activate", () => {
-                    if (BrowserWindow.getAllWindows().length === 0) {
-                        this.createWindow();
-                    } else {
-                        this.win?.show();
+                    const dnsProvider = this.config.config.doh_provider;
+                    const dohServers: Partial<Record<typeof dnsProvider, string>> = {
+                        cloudflare: "https://cloudflare-dns.com/dns-query",
+                        google: "https://dns.google/dns-query",
+                        quad9: "https://dns.quad9.net/dns-query",
+                    };
+                    const dohServer = dohServers[dnsProvider];
+                    app.configureHostResolver({
+                        enableBuiltInResolver: dnsProvider !== "off",
+                        secureDnsMode: dnsProvider === "off" ? "off" : "automatic",
+                        enableHappyEyeballs: true,
+                        ...(dohServer ? { secureDnsServers: [dohServer] } : {}),
+                    });
+                    await this.createWindow();
+                    /*
+                     * Les versions viennent du dépôt de Nebula, donc en chercher une est
+                     * sans danger. L'attente laisse la fenêtre s'ouvrir : la notification
+                     * est pour la personne qui la lit, pas pour un client qui démarre.
+                     */
+                    if (this.config.config.auto_check_updates) {
+                        setTimeout(() => {
+                            this.checkingForUpdates().catch(e => {
+                                this.logger.error("Recherche de mise à jour impossible:", e);
+                            });
+                        }, 10_000).unref();
                     }
-                });
-            });
+                    app.on("activate", () => {
+                        if (BrowserWindow.getAllWindows().length === 0) {
+                            void this.createWindow().catch(error => this.startupFailed(error));
+                        } else {
+                            this.showApp();
+                        }
+                    });
+                })
+                .catch(error => this.startupFailed(error));
         }
 
         // Create context menu
@@ -360,16 +388,16 @@ export class DiscordBotClient extends EventEmitter {
 
         setupIPCEvents(this);
     }
-    get session () {
-        if (this.customSession) {
-            return this.customSession;
+    get discordSession () {
+        if (this.customDiscordSession) {
+            return this.customDiscordSession;
         } else {
             return session.defaultSession;
         }
     }
     async sessionPatch () {
         // Disable stripe.com
-        this.session.webRequest.onBeforeRequest(
+        this.discordSession.webRequest.onBeforeRequest(
             {
                 urls: [
                     "https://*.stripe.com/*",
@@ -396,7 +424,7 @@ export class DiscordBotClient extends EventEmitter {
         );
         /*
         // Rule 1: Remove all CSP headers
-        this.session.webRequest.onHeadersReceived(
+        this.discordSession.webRequest.onHeadersReceived(
             { urls: ["<all_urls>"], types: ["mainFrame", "subFrame"] },
             (details, callback) => {
                 if (!details.responseHeaders) {
@@ -412,7 +440,7 @@ export class DiscordBotClient extends EventEmitter {
         );
         */
         // Rule 2: Force CSS content-type on GitHub raw URLs
-        this.session.webRequest.onHeadersReceived(
+        this.discordSession.webRequest.onHeadersReceived(
             {
                 urls: ["https://raw.githubusercontent.com/*"],
                 types: ["stylesheet"],
@@ -430,7 +458,7 @@ export class DiscordBotClient extends EventEmitter {
             },
         );
         // Load Vencord-Web Extension
-        const extension = await this.session.extensions.loadExtension(Constants.VencordExtensionPath);
+        const extension = await this.discordSession.extensions.loadExtension(Constants.VencordExtensionPath);
         this.logger.info(`Loaded Vencord Extension v${extension.version} from ${Constants.VencordExtensionPath}`);
     }
     async createWindow () {
@@ -438,17 +466,20 @@ export class DiscordBotClient extends EventEmitter {
         const primaryDisplay = screen.getPrimaryDisplay();
         const { width, height } = primaryDisplay.workAreaSize;
         // Create the browser window.
-        this.win = new BrowserWindow({
+        this.appWindow = new BrowserWindow({
+            show: false,
             width: Math.floor(width * 0.9),
             height: Math.floor(height * 0.9),
             minWidth: 940,
             minHeight: 500,
             icon: Constants.icon128,
             webPreferences: {
-                webSecurity: false,
-                sandbox: false,
-                preload: path.join(__dirname, "ElectronPreload.js"),
-                session: this.session,
+                webSecurity: true,
+                sandbox: true,
+                contextIsolation: true,
+                nodeIntegration: false,
+                preload: path.join(__dirname, "Preloads", "ElectronPreload.js"),
+                session: this.discordSession,
             },
             backgroundColor: "#36393f",
             titleBarStyle: "hidden",
@@ -456,42 +487,79 @@ export class DiscordBotClient extends EventEmitter {
             title: Constants.AppName,
             trafficLightPosition: { x: 10, y: 10 },
         });
-        this.captureRendererLogs(this.win);
+        this.discordWebContents = this.appWindow.webContents;
+        this.captureRendererLogs(this.appWindow);
         this.keepStorageOnDisk();
         this.startGameDetection();
         // BrowserWindow Event
-        this.win.on("close", event => {
+        this.appWindow.on("close", event => {
             if (!this.#shouldQuitApp) {
                 event.preventDefault();
-                this.win.hide();
+                this.appWindow.hide();
             }
         });
-        this.win.on("focus", () => {
-            this.win.flashFrame(false);
+        this.appWindow.on("focus", () => {
+            this.appWindow.flashFrame(false);
         });
 
+        this.startupWindow?.loading();
+        const contents = this.discordWebContents;
+        contents.on("did-fail-load", (_event, code, _description, _url, isMainFrame) => {
+            if (isMainFrame && code !== -3 && this.startupWindow) {
+                this.startupWindow.fail("Impossible de charger Nebula. Vérifie ta connexion et réessaie.");
+            }
+        });
+        contents.on("render-process-gone", () => {
+            if (this.startupWindow) this.startupWindow.fail("Nebula s’est arrêtée pendant le démarrage. Réessaie.");
+        });
         await this.sessionPatch();
 
         this.logger.info(`Electron UserData: ${app.getPath("userData")}`);
-        // Microphone
-        if (process.platform === "darwin") {
-            this.session.setPermissionRequestHandler(async (_webContents, permission, callback, details) => {
-                let granted = true;
-                if ("mediaTypes" in details) {
-                    if (details.mediaTypes?.includes("audio")) {
-                        granted &&= await systemPreferences.askForMediaAccess("microphone");
-                    }
-                    if (details.mediaTypes?.includes("video")) {
-                        granted = false;
-                    }
-                }
-                callback(granted);
-            });
-        }
-        // webContents
-        if (!app.isPackaged) this.win.webContents.openDevTools();
+        const mainOrigin = `https://${Constants.CustomDiscordDomain}`;
+        const isMainOrigin = (url: string) => {
+            try {
+                return new URL(url).origin === mainOrigin;
+            } catch {
+                return false;
+            }
+        };
+        this.discordSession.setPermissionRequestHandler((requester, permission, callback, details) => {
+            if (requester !== contents || !("requestingUrl" in details) || !isMainOrigin(details.requestingUrl)) {
+                return callback(false);
+            }
+            const decision = decidePermission(permission, details as { mediaTypes?: string[] });
+            if (decision === "refuse") return callback(false);
+            if (decision === "accorde") return callback(true);
+            if (process.platform === "darwin") {
+                void systemPreferences.askForMediaAccess("microphone").then(callback, () => callback(false));
+            } else {
+                callback(true);
+            }
+        });
+        this.discordSession.setPermissionCheckHandler((requester, permission, origin, details) => {
+            if (origin !== mainOrigin) return false;
+            if (permission === "notifications") return true;
+            if (requester !== contents || !details.isMainFrame) return false;
+            // Media checks must reach the request handler, where camera is rejected.
+            return ["fullscreen", "clipboard-sanitized-write", "loopback-network"].includes(permission);
+        });
+        contents.on("will-navigate", (event, url) => {
+            if (!isMainOrigin(url)) return event.preventDefault();
+            /*
+             * Une invitation ouverte sur place mène à la page « Discord App Detected »,
+             * qui propose d'ouvrir une application de bureau : un cul-de-sac, puisque
+             * Nebula *est* l'application. Le code est repris du lien et rendu au client,
+             * qui montre l'invitation comme pour un lien reçu dans un message. Le même
+             * détour existait déjà pour les liens ouverts dans une nouvelle fenêtre.
+             */
+            const invite = inviteCodeFrom(url);
+            if (invite) {
+                event.preventDefault();
+                this.discordWebContents.send(IPCEvent.OpenInvite, invite);
+            }
+        });
         // Discord popout
-        this.win.webContents.setWindowOpenHandler(({ url }) => {
+        this.discordWebContents.setWindowOpenHandler(({ url }) => {
             this.logger.log("WindowOpenHandler", url);
             switch (url) {
                 case "about:blank":
@@ -504,7 +572,10 @@ export class DiscordBotClient extends EventEmitter {
                             width: 1080,
                             height: 720,
                             webPreferences: {
-                                webSecurity: false,
+                                webSecurity: true,
+                                sandbox: true,
+                                contextIsolation: true,
+                                nodeIntegration: false,
                             },
                         },
                     };
@@ -522,7 +593,10 @@ export class DiscordBotClient extends EventEmitter {
                             height: 720,
                             // titleBarStyle: "hidden",
                             webPreferences: {
-                                webSecurity: false,
+                                webSecurity: true,
+                                sandbox: true,
+                                contextIsolation: true,
+                                nodeIntegration: false,
                             },
                         },
                     };
@@ -542,11 +616,11 @@ export class DiscordBotClient extends EventEmitter {
 
             const invite = inviteCodeFrom(url);
             if (invite) {
-                this.win.webContents.send(IPCEvent.OpenInvite, invite);
+                this.appWindow.webContents.send(IPCEvent.OpenInvite, invite);
                 return { action: "deny" };
             }
 
-            if (this.copyInviteInstead(url, this.win.webContents)) return { action: "deny" };
+            if (this.copyInviteInstead(url, this.appWindow.webContents)) return { action: "deny" };
 
             let protocolHandle: string;
 
@@ -568,9 +642,12 @@ export class DiscordBotClient extends EventEmitter {
             return { action: "deny" };
         });
         // WebContents Event
-        this.win.webContents
+        this.discordWebContents
             .on("did-create-window", (window, details) => {
                 window.show();
+                window.webContents.on("will-navigate", (event, url) => {
+                    if (!isAllowedPopoutURL(url, this.port)) event.preventDefault();
+                });
                 window.on("closed", () => {
                     this.childWindows.delete(details.frameName);
                 });
@@ -578,14 +655,43 @@ export class DiscordBotClient extends EventEmitter {
                 this.childWindows.set(details.frameName, window);
             })
             .on("did-start-loading", () => {
-                this.win.setProgressBar(2, { mode: "indeterminate" });
+                this.appWindow.setProgressBar(2, { mode: "indeterminate" });
             })
             .on("did-stop-loading", () => {
-                this.win.setTitle(Constants.AppName);
-                this.win.setProgressBar(-1);
+                this.appWindow.setTitle(Constants.AppName);
+                this.appWindow.setProgressBar(-1);
             });
 
-        this.win.loadURL(`https://${Constants.CustomDiscordDomain}`);
+        // Like Vesktop, only a successful navigation promise completes startup.
+        await contents.loadURL(`https://${Constants.CustomDiscordDomain}`);
+        if (this.#shouldQuitApp || contents.isDestroyed()) return;
+        if (this.startupWindow && !await this.startupWindow.waitForAnimation(() => {
+            if (!this.#shouldQuitApp && !contents.isDestroyed()) this.appWindow.showInactive();
+        })) return;
+        if (this.#shouldQuitApp || contents.isDestroyed()) return;
+        this.appWindow.show();
+        this.startupWindow?.finish();
+        this.startupWindow = undefined;
+        if (!app.isPackaged) contents.openDevTools();
+    }
+    showApp () {
+        if (this.startupWindow) {
+            this.startupWindow.show();
+        } else if (this.appWindow && !this.appWindow.isDestroyed()) {
+            this.appWindow.show();
+            this.appWindow.setSkipTaskbar(false);
+        }
+    }
+    private async startupFailed (error: unknown) {
+        if (this.#shouldQuitApp) return;
+        this.logger.error("Startup failed", error);
+        await app.whenReady();
+        this.startupWindow ??= new StartupWindow(
+            () => this.relaunch(),
+            () => this.quit(),
+            this.config.config.startup_animation,
+        );
+        this.startupWindow.fail("Nebula n’a pas pu démarrer. Réessaie.");
     }
     showNotification (options: NotificationConstructorOptions, callback?: () => unknown) {
         const notif = new Notification(options);
@@ -720,7 +826,7 @@ export class DiscordBotClient extends EventEmitter {
                 }
 
                 dialog
-                    .showMessageBox(this.win, {
+                    .showMessageBox(this.appWindow, {
                         type: "info",
                         title: "Mise à jour prête",
                         message: `La version ${info.version} a été téléchargée. Redémarrer l’application pour l’appliquer ?`,
@@ -747,7 +853,7 @@ export class DiscordBotClient extends EventEmitter {
     // Editor Window
     /** Watch the running processes and tell every open client window about the games found */
     startGameDetection () {
-        const clientWindows = () => [this.win, ...this.accountWindows.values()];
+        const clientWindows = () => [this.appWindow, ...this.accountWindows.values()];
         GameDetection.start(
             (games, added, removed) => {
                 for (const win of clientWindows()) {
@@ -768,7 +874,7 @@ export class DiscordBotClient extends EventEmitter {
     keepStorageOnDisk () {
         const flush = async () => {
             try {
-                await this.session.flushStorageData();
+                await this.discordSession.flushStorageData();
             } catch (e) {
                 this.logger.debug("Impossible d'écrire le stockage sur le disque:", e);
             }
@@ -776,8 +882,8 @@ export class DiscordBotClient extends EventEmitter {
         // Every five minutes is enough: the events below cover the cases that matter
         const timer = setInterval(flush, 300_000);
         timer.unref?.();
-        this.win.on("hide", flush);
-        this.win.webContents.on("render-process-gone", flush);
+        this.appWindow.on("hide", flush);
+        this.appWindow.webContents.on("render-process-gone", flush);
         app.on("before-quit", flush);
         powerMonitor.on("shutdown", flush);
         powerMonitor.on("suspend", flush);
@@ -877,7 +983,7 @@ export class DiscordBotClient extends EventEmitter {
             webPreferences: {
                 webSecurity: false,
                 sandbox: false,
-                preload: path.join(__dirname, "ElectronPreload.js"),
+                preload: path.join(__dirname, "Preloads", "ElectronPreload.js"),
                 session: accountSession,
             },
             backgroundColor: Constants.DiscordBackgroundColor,
@@ -951,7 +1057,7 @@ export class DiscordBotClient extends EventEmitter {
             webPreferences: {
                 webSecurity: false,
                 sandbox: false,
-                preload: path.join(__dirname, "AccountLoginPreload.js"),
+                preload: path.join(__dirname, "Preloads", "AccountLoginPreload.js"),
             },
             icon: Constants.icon128,
             frame: true,
@@ -980,7 +1086,7 @@ export class DiscordBotClient extends EventEmitter {
                 webPreferences: {
                     webSecurity: false,
                     sandbox: false,
-                    preload: path.join(__dirname, "AccountLoginPreload.js"),
+                    preload: path.join(__dirname, "Preloads", "AccountLoginPreload.js"),
                 },
                 icon: Constants.icon128,
                 frame: true,
@@ -1010,7 +1116,7 @@ export class DiscordBotClient extends EventEmitter {
         // The account belongs to whichever client window opened the login window:
         // signing in from a second window must not hijack the first one
         const target =
-            this.accountLoginTarget && !this.accountLoginTarget.isDestroyed() ? this.accountLoginTarget : this.win;
+            this.accountLoginTarget && !this.accountLoginTarget.isDestroyed() ? this.accountLoginTarget : this.appWindow;
         if (!target || target.isDestroyed()) return false;
         await this.injectToken(target, token);
         target.reload();
@@ -1020,70 +1126,19 @@ export class DiscordBotClient extends EventEmitter {
         return true;
     }
 
-    openConfigEditorWindow () {
-        if (this.editorWindow && !this.editorWindow.isDestroyed()) {
-            this.editorWindow.show();
+    openSettingsWindow () {
+        if (this.settingsWindow && !this.settingsWindow.window.isDestroyed()) {
+            this.settingsWindow.show();
             return;
         }
-        this.editorWindow = new BrowserWindow({
-            width: 1080,
-            height: 720,
-            minWidth: 800,
-            minHeight: 600,
-            webPreferences: {
-                webSecurity: false,
-                sandbox: false,
-                preload: path.join(__dirname, "ConfigEditorPreload.js"),
-            },
-            icon: Constants.icon128,
-            frame: true,
-            autoHideMenuBar: true,
-            /*
-            ...(process.platform === "darwin" && {
-                titleBarStyle: "hidden",
-                trafficLightPosition: { x: 10, y: 10 },
-            }),
-            */
-        });
-        this.editorWindow.loadFile(Constants.ConfigEditorHTMLPath);
-        this.editorWindow.on("closed", () => {
-            this.editorWindow = undefined;
+        this.settingsWindow = new SettingsWindow(this.config);
+        this.settingsWindow.window.on("closed", () => {
+            this.settingsWindow = undefined;
         });
     }
 
-    // Beta
     openDiscordMessageEditorWindow () {
-        const editorWindow = new BrowserWindow({
-            width: 1080,
-            height: 720,
-            minWidth: 800,
-            minHeight: 600,
-            parent: this.win,
-            modal: true,
-            webPreferences: {
-                webSecurity: false,
-                sandbox: false,
-                preload: path.join(__dirname, "MessageEditorPreload.js"),
-                partition: "temp:" + randomUUID(), // Use a temporary session for the message editor
-            },
-            icon: Constants.icon128,
-            frame: true,
-            autoHideMenuBar: true,
-            /*
-            ...(process.platform === "darwin" && {
-                titleBarStyle: "hidden",
-                trafficLightPosition: { x: 10, y: 10 },
-            }),
-            */
-        });
-        editorWindow.loadURL(`http://localhost:${this.messageEditorPort}`);
-        // Handle Message Editor Ports
-        editorWindow.webContents.ipc.once(IPCEvent.MessageEditorReactReady, () => {
-            this.logger.debug("Message Editor is ready. Setting up MessageChannel...");
-            const { port1, port2 } = new MessageChannelMain();
-            editorWindow.webContents.postMessage(IPCEvent.MessageEditorReceivePort, null, [port2]);
-            this.win.webContents.postMessage(IPCEvent.MainAppReceiveEditorPort, null, [port1]);
-        });
+        new MessageEditorWindow(this.appWindow, this.discordWebContents);
     }
 
     get app () {

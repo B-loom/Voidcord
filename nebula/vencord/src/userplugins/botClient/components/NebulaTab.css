@@ -165,7 +165,7 @@
 .vc-nebula-docQuote {
     margin: 10px 0;
     padding: 10px 14px;
-    border-left: 3px solid var(--brand-500);
+    border-left: 3px solid var(--brand-500, #5865f2);
     border-radius: 4px;
     background: var(--background-secondary-alt, rgb(0 0 0 / 15%));
 }
@@ -177,11 +177,11 @@
 .vc-nebula-docRule {
     height: 1px;
     margin: 18px 0;
-    background: var(--background-modifier-accent);
+    background: var(--background-modifier-accent, var(--border-subtle, rgb(255 255 255 / 8%)));
 }
 
 .vc-nebula-docLink {
-    color: var(--text-link);
+    color: var(--text-link, var(--text-brand, #00a8fc));
     text-decoration: underline;
 }
 
@@ -229,7 +229,7 @@
 
 .vc-nebula-progressText {
     position: relative;
-    color: var(--header-primary);
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
     font-size: 14px;
 }
 

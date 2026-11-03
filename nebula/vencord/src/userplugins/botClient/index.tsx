@@ -19,7 +19,7 @@ import { Paragraph } from "@components/Paragraph";
 import { getCurrentChannel, getCurrentGuild } from "@utils/discord";
 import { Logger } from "@utils/Logger";
 import definePlugin, { OptionType } from "@utils/types";
-import { Channel, Guild, Role, type UserStore as UserStoreType } from "@vencord/discord-types";
+import { Channel, Guild, Role,type UserStore as UserStoreType } from "@vencord/discord-types";
 import { DraftType, MessageFlags } from "@vencord/discord-types/enums";
 import { findByCodeLazy, findByProps, findByPropsLazy, findStore } from "@webpack";
 import {
@@ -36,10 +36,13 @@ import {
     Menu,
     MessageActions,
     NavigationRouter,
+    openModal,
     PermissionsBits,
     PresenceStore,
     React,
     RestAPI,
+    showToast,
+    UploadAttachmentStore,
     UserStore,
     VoiceStateStore
 } from "@webpack/common";
@@ -49,17 +52,21 @@ import SettingsPlugin from "@plugins/_core/settings";
 import AuthBoxMultiTokenLogin, { multiTokenState } from "./components/AuthBoxMultiTokenLogin";
 import AuthBoxTokenLogin from "./components/AuthBoxTokenLogin";
 import { blockUnavailableModals } from "./components/BlockedModals";
+import EmbedEditorModal from "./components/EmbedEditor";
 import { listenForScreenShare } from "./components/ScreenSharePicker";
 import NebulaTab, { BotBillingTab, ChangelogTab, NebulaIcon, ReadmeTab } from "./components/NebulaTab";
 // Components
 import { IconEmbedSvg } from "./icon.svg";
 import type { EmojiGuildData, Group, List, MemberPatch, OpItem, Ops } from "./typing/index.d.ts";
+import { applicationEmojiPatches } from "./utils/application-emoji-patches";
+import { applicationEmojiHelpers } from "./utils/application-emojis";
 import { buildDiscordAPIErrorMessage, originalSessionStorage, RegExToken } from "./utils/common";
+import { directMessageHelpers, directMessagePatch } from "./utils/create-dm-by-id";
 import db from "./utils/database";
 import { hasEmbedPerms } from "./utils/fakeNitroPlugin";
 import { doIdentifyFirstPatch, handleClosePatch, handleDispatchPatch, isUserAccountSession, openPrivateChannelPatch, updateGuildSubscriptionsPatch, voiceStateUpdatePatch } from "./utils/patches";
+import { settingsProtoHelpers, settingsProtoPatch } from "./utils/settings-proto";
 import { SnowflakeUtil } from "./utils/SnowflakeUtil";
-import { showToast, Toasts } from "./utils/toasts";
 import { PendingReplyStore, uploadFile } from "./utils/voiceMessagePlugin";
 
 /** The local channel served by the app itself, which is always present and cannot be closed */
@@ -191,7 +198,7 @@ const requestOpenMessageEditorWindow = (
                 };
                 if (webMessage.type === "submit") {
                     if (webMessage.files.length > 0) {
-                        showToast("Uploading attachments... Please be patient", Toasts.Type.MESSAGE);
+                        showToast({ text: "Uploading attachments... Please be patient", variant: "success" });
                     }
                     const attachments: {
                         id: string;
@@ -216,7 +223,7 @@ const requestOpenMessageEditorWindow = (
                             })
                             .catch(e => {
                                 BotClientLogger.error(e);
-                                showToast(`Failed to upload file: ${f.name}`, Toasts.Type.FAILURE);
+                                showToast({ text: `Failed to upload file: ${f.name}`, variant: "critical" });
                             });
                     }
                     const message = webMessage.messages[0].data;
@@ -244,14 +251,14 @@ const requestOpenMessageEditorWindow = (
                                     channelId,
                                     draftType: DraftType.ChannelMessage,
                                 });
-                                return showToast("Message has been sent successfully", Toasts.Type.SUCCESS);
+                                return showToast({ text: "Message has been sent successfully", variant: "success" });
                             })
                             .catch(e => {
                                 return sendBotMessage(channelId, {
                                     content: `❌ An error occurred during sending message\n${buildDiscordAPIErrorMessage(e.body)}`,
                                 });
                             });
-                    } else if (webMessage.action === "edit") {
+                    } else if (webMessage.action === "edit" && messageId) {
                         RestAPI.patch({
                             url: Constants.Endpoints.MESSAGE(channelId, messageId),
                             body: {
@@ -263,7 +270,7 @@ const requestOpenMessageEditorWindow = (
                             },
                         })
                             .then(() => {
-                                return showToast("Message has been edited successfully!", Toasts.Type.SUCCESS);
+                                return showToast({ text: "Message has been edited successfully!", variant: "success" });
                             })
                             .catch(e => {
                                 return sendBotMessage(channelId, {
@@ -338,18 +345,15 @@ const requestOpenMessageEditorWindow = (
     window.addEventListener("message", onWindowMessage);
 };
 
-const CreateAdvancedMessageEditor: ChatBarButtonFactory = prop => {
+const CreateMessageEditor: ChatBarButtonFactory = prop => {
+    const { messageEditor } = settings.use(["messageEditor"]);
     // The editor sends through the bot's REST credentials: it has no meaning on a user account
     if (isUserAccountSession()) return null;
     const handle = () => {
         const channelId = prop.channel.id;
         // New message
         if (channelId.length < 17) {
-            return Toasts.show({
-                id: Toasts.genId(),
-                message: `Cannot send embed in this channel (analyticsName: ${prop.type.analyticsName})`,
-                type: Toasts.Type.FAILURE,
-            });
+            return showToast({ text: `Cannot send embed in this channel (analyticsName: ${prop.type.analyticsName})`, variant: "critical" });
         }
         if (!hasEmbedPerms(channelId)) {
             return Alerts.show({
@@ -364,6 +368,43 @@ const CreateAdvancedMessageEditor: ChatBarButtonFactory = prop => {
                 ),
             });
         }
+        if (messageEditor === "legacy") {
+            return openModal(props => (
+                <EmbedEditorModal
+                    modalProps={props}
+                    isCreate
+                    callbackSendEmbed={async embed => {
+                        const content = getDraft(channelId) || undefined;
+                        const reply = PendingReplyStore.getPendingReply(channelId);
+                        const uploads = [...UploadAttachmentStore.getUploads(channelId, DraftType.ChannelMessage)];
+                        const attachments = await Promise.all(uploads.map(async (upload, id) => {
+                            const { file } = upload.item;
+                            const uploaded = upload.status === "COMPLETED" ? upload
+                                : await uploadFile(channelId, upload.filename, file.type, file);
+                            return {
+                                id: String(id),
+                                filename: upload.spoiler ? `SPOILER_${upload.filename}` : upload.filename,
+                                uploaded_filename: uploaded.uploadedFilename,
+                                description: upload.description,
+                            };
+                        }));
+                        await RestAPI.post({
+                            url: Constants.Endpoints.MESSAGES(channelId),
+                            body: {
+                                content,
+                                embeds: [embed],
+                                attachments,
+                                message_reference: reply ? MessageActions.getSendMessageOptionsForReply(reply)?.messageReference : null,
+                            },
+                        });
+                        FluxDispatcher.dispatch({ type: "DELETE_PENDING_REPLY", channelId });
+                        FluxDispatcher.dispatch({ type: "DRAFT_CLEAR", channelId, draftType: DraftType.ChannelMessage });
+                        FluxDispatcher.dispatch({ type: "UPLOAD_ATTACHMENT_CLEAR_ALL_FILES", channelId, draftType: DraftType.ChannelMessage });
+                        showToast({ text: "Embed has been sent successfully", variant: "success" });
+                    }}
+                />
+            ));
+        }
         // idk how to pass attachments to Editor
         const reply = PendingReplyStore.getPendingReply(channelId);
         const content = getDraft(channelId) || undefined;
@@ -373,34 +414,53 @@ const CreateAdvancedMessageEditor: ChatBarButtonFactory = prop => {
         });
     };
     return (
-        <ChatBarButton onClick={handle} tooltip="Éditeur de message Nebula">
+        <ChatBarButton onClick={handle} tooltip={messageEditor === "legacy" ? "Éditeur d'embed" : "Éditeur de message Nebula (bêta)"}>
             <IconEmbedSvg />
         </ChatBarButton>
     );
 };
 
-const EditAdvancedMessageEditor = msg => {
+const EditMessageEditor = msg => {
+    const legacy = settings.store.messageEditor === "legacy";
     const handler = async () => {
-        showToast("Fetching message...", Toasts.Type.MESSAGE, {
-            position: Toasts.Position.TOP,
-        });
-        // Fetch raw msg from discord
-        const msgRaw = await RestAPI.get({
-            url: Constants.Endpoints.MESSAGE(msg.channel_id, msg.id),
-        });
-        const channelId = msg.channel_id;
-        const messageId = msg.id;
-        requestOpenMessageEditorWindow(
-            channelId,
-            messageId,
-            "edit",
-            (msgRaw.body.flags & MessageFlags.IS_COMPONENTS_V2) !== 0,
-            msgRaw.body,
-        );
+        try {
+            showToast({ text: "Fetching message...", variant: "default", position: "top" });
+            // Fetch raw msg from discord
+            const msgRaw = await RestAPI.get({
+                url: Constants.Endpoints.MESSAGE(msg.channel_id, msg.id),
+            });
+            const channelId = msg.channel_id;
+            const messageId = msg.id;
+            if (legacy) {
+                return openModal(props => (
+                    <EmbedEditorModal
+                        modalProps={props}
+                        messageRaw={msgRaw.body}
+                        callbackSendEmbed={async (_embed, data) => {
+                            await RestAPI.patch({
+                                url: Constants.Endpoints.MESSAGE(channelId, messageId),
+                                body: data,
+                            });
+                            showToast({ text: "Embed has been edited successfully", variant: "success" });
+                        }}
+                    />
+                ));
+            }
+            requestOpenMessageEditorWindow(
+                channelId,
+                messageId,
+                "edit",
+                (msgRaw.body.flags & MessageFlags.IS_COMPONENTS_V2) !== 0,
+                msgRaw.body,
+            );
+        } catch (e) {
+            showToast({ text: `Failed to fetch message: ${e instanceof Error ? e.message : String(e)}`, variant: "critical" });
+        }
     };
-    if (!isUserAccountSession() && msg.author.id === GetApplicationId.getId()) {
+    if (!isUserAccountSession() && msg.author.id === GetApplicationId.getId()
+        && (!legacy || (!(msg.flags & MessageFlags.IS_COMPONENTS_V2) && msg.embeds.some(e => e.type === "rich")))) {
         return {
-            label: "Éditeur de message Nebula",
+            label: legacy ? "Éditeur d'embed" : "Éditeur de message Nebula (bêta)",
             icon: IconEmbedSvg,
             message: msg,
             channel: ChannelStore.getChannel(msg.channel_id),
@@ -425,14 +485,22 @@ const settings = definePluginSettings({
         default: 2,
         restartNeeded: false,
     },
+    messageEditor: {
+        description: "Éditeur ouvert par le bouton de la barre de saisie et par celui des messages",
+        type: OptionType.SELECT,
+        options: [
+            { label: "Éditeur de message Nebula (bêta)", value: "advanced", default: true },
+            { label: "Éditeur d'embed (ancien)", value: "legacy" },
+        ],
+    },
     embedChatButton: {
-        description: "Add a button to show the Embed Editor modal in the chat bar",
+        description: "Show the message editor button in the chat bar",
         type: OptionType.BOOLEAN,
         default: true,
         restartNeeded: true,
     },
     embedEditMessageButton: {
-        description: "Add a button to show Embed Editor modal in messages",
+        description: "Show the message editor button in messages",
         type: OptionType.BOOLEAN,
         default: true,
         restartNeeded: true,
@@ -460,18 +528,18 @@ const settings = definePluginSettings({
                     type: "SET_CHANNEL_BITRATE",
                     bitrate: Math.floor(kbps * 1000),
                 });
-                showToast("Voice channel bitrate override enabled", Toasts.Type.SUCCESS);
-                showToast(
-                    "For the best voice quality, please disable echo cancellation and Krisp.",
-                    Toasts.Type.SUCCESS,
-                );
+                showToast({ text: "Voice channel bitrate override enabled", variant: "success" });
+                showToast({
+                    text: "For the best voice quality, please disable echo cancellation and Krisp.",
+                    variant: "success",
+                });
             } else {
                 // Get current voice channel bitrate
                 const channelId = VoiceStateStore.getVoiceStateForUser(GetApplicationId.getId())?.channelId;
                 if (!channelId) return;
                 const channel = ChannelStore.getChannel(channelId);
                 BotClientLogger.log(`[Disable Override] Set voice channel bitrate to ${channel?.bitrate} bps`);
-                showToast("Voice channel bitrate override disabled", Toasts.Type.SUCCESS);
+                showToast({ text: "Voice channel bitrate override disabled", variant: "success" });
                 FluxDispatcher.dispatch({
                     type: "SET_CHANNEL_BITRATE",
                     bitrate: channel.bitrate,
@@ -510,7 +578,7 @@ export default definePlugin({
         // AuthBox (Token)
         {
             // ???
-            find: '"username webauthn"',
+            find: "ImpressionGroups.ACCOUNT_REVERT_FLOW",
             replacement: [
                 {
                     // #region Example code for reference
@@ -884,7 +952,7 @@ export default definePlugin({
                 },
                 {
                     match: /streamCreate\(((\w+,?)+)?\){/,
-                    replace: "$& if(!$self.isUserAccountSession())return;",
+                    replace: "$& if(!$self.isUserAccountSession())return $self.botCannotStream();",
                 },
                 {
                     match: /streamWatch\(((\w+,?)+)?\){/,
@@ -969,8 +1037,8 @@ export default definePlugin({
             find: "notificationSettings:{",
             replacement: [
                 {
-                    match: /(notificationSettings:{flags:)([\w.]+)},/,
-                    replace: "$1 0},",
+                    match: /(notificationSettings:\{flags:)[^,}]+/,
+                    replace: "$1 0",
                 },
                 {
                     // If user account is already logged in, proceed to log out
@@ -999,6 +1067,23 @@ export default definePlugin({
                 {
                     match: /(\d):{fileSize:\w+}/g,
                     replace: "$1:{fileSize:20971520}",
+                },
+            ],
+        },
+        /*
+         * Le correctif ci-dessus ne touche que les paliers Nitro. Un compte sans Nitro,
+         * et donc tout bot, reste sur la valeur par défaut du client : 10 Mio, alors que
+         * Discord est passé à 20 Mio le 3 septembre 2026. Résultat, un fichier de 12 Mo
+         * était refusé sans raison. Le plancher est remonté ici, sur la fonction que le
+         * client interroge. Les serveurs boostés gardent leur limite plus haute : elle
+         * est calculée ailleurs, à partir des fonctionnalités du serveur.
+         */
+        {
+            find: 'location:"getUserMaxFileSize"',
+            replacement: [
+                {
+                    match: /function (\i)\((\i)\)\{return null==\i\?/,
+                    replace: "function $1($2){return Math.max(20971520,$1_($2));}function $1_($2){return null==$2?",
                 },
             ],
         },
@@ -1040,17 +1125,17 @@ export default definePlugin({
                 },
             ],
         },
-        // Emoji
+        // Fix 2000 character limit for messages
         {
-            find: "}searchWithoutFetchingLatest(",
-            replacement: [
-                {
-                    match: /;return{unlocked:this\.getSearchResultsOrder\((\w+)\.unlocked/,
-                    replace:
-                        ";$self.getApplicationEmojis();$1.unlocked = [...$1.unlocked, ...(window.applicationEmojis || []).filter(o => o.name?.toLowerCase().includes(arguments[0].query?.toLowerCase()))];return{unlocked:this.getSearchResultsOrder($1.unlocked",
-                },
-            ],
+            find: ",canUseIncreasedMessageLength:function(",
+            replacement: {
+                match: /,canUseIncreasedMessageLength:function\(\w+\)\{return/,
+                replace: ",canUseIncreasedMessageLength:function(){return false;return",
+            },
         },
+        ...applicationEmojiPatches,
+        directMessagePatch,
+        settingsProtoPatch,
         // Support link
         {
             find: '"support.discord.com"',
@@ -1069,9 +1154,9 @@ export default definePlugin({
             replacement: [
                 {
                     match: /case \i\.\i\.WINDOWS:/,
-                    replace: 'case "WEB":',
-                },
-            ],
+                    replace: 'case "WEB":'
+                }
+            ]
         },
         // Visual Refresh
         {
@@ -1079,13 +1164,13 @@ export default definePlugin({
             replacement: [
                 {
                     match: /\i===\i\.PlatformTypes\.WINDOWS/g,
-                    replace: "true",
+                    replace: "true"
                 },
                 {
                     match: /\i===\i\.PlatformTypes\.WEB/g,
-                    replace: "false",
-                },
-            ],
+                    replace: "false"
+                }
+            ]
         },
         // src > renderer > patches > windowMethods.tsx
         {
@@ -1109,8 +1194,8 @@ export default definePlugin({
             find: '"mod+alt+i"',
             replacement: {
                 match: /"discord\.com"===location\.host/,
-                replace: "false",
-            },
+                replace: "false"
+            }
         },
         {
             // Custom patch
@@ -1119,8 +1204,8 @@ export default definePlugin({
             find: ".setDevtoolsCallbacks(",
             replacement: [
                 {
-                    match: /if\(null!=(\i)\)(?=.{0,50}\1\.window\.setDevtoolsCallbacks)/,
-                    replace: "if(true)",
+                    match: /if\(null==([A-Za-z_$][\w$]*)\|\|"0\.0\.0"!==\1\.app\.getVersion\(\)\)(?=\{if\(null!=\1\)if\(null!=\1\.window\.setDevtoolsCallbacks\))/,
+                    replace: "if(false)",
                 },
             ],
         },
@@ -1129,8 +1214,8 @@ export default definePlugin({
             find: '"NotificationSettingsStore',
             replacement: {
                 match: /\.isPlatformEmbedded(?=\?\i\.\i\.ALL)/g,
-                replace: "$&||true",
-            },
+                replace: "$&||true"
+            }
         },
         {
             /*
@@ -1352,6 +1437,12 @@ export default definePlugin({
         },
     ],
     flux: {
+        CONNECTION_OPEN() {
+            void applicationEmojiHelpers.getApplicationEmojis();
+        },
+        LOGOUT() {
+            applicationEmojiHelpers.clearApplicationEmojis();
+        },
         GUILD_MEMBER_LIST_UPDATE(data) {
             BotClientLogger.debug(
                 "botClient#updateGuildMembersList()",
@@ -1436,10 +1527,10 @@ export default definePlugin({
         /*
         Object.keys(RelationshipsModule).forEach(a => {
             RelationshipsModule[a] = function () {
-                showToast(
-                    `${window.BotClientNative.getBotClientName()} cannot use Relationships Module`,
-                    Toasts.Type.FAILURE,
-                );
+                showToast({
+                    text: `${window.BotClientNative.getBotClientName()} cannot use Relationships Module`,
+                    variant: "critical",
+                });
                 return Promise.reject(`${window.BotClientNative.getBotClientName()} cannot use Relationships Module`);
             };
         });
@@ -1467,10 +1558,10 @@ export default definePlugin({
                 RelationshipsModule[method] = function (...args: any[]) {
                     // Only bots are barred from the Relationships module
                     if (isUserAccountSession()) return original(...args);
-                    showToast(
-                        `${window.BotClientNative.getBotClientName()} cannot use Relationships Module`,
-                        Toasts.Type.FAILURE,
-                    );
+                    showToast({
+                        text: `${window.BotClientNative.getBotClientName()} cannot use Relationships Module`,
+                        variant: "critical",
+                    });
                     return Promise.reject(
                         `${window.BotClientNative.getBotClientName()} cannot use Relationships Module`,
                     );
@@ -1565,7 +1656,7 @@ export default definePlugin({
                 const closeOriginal = PrivateChannelActions.closePrivateChannel.bind(PrivateChannelActions);
                 PrivateChannelActions.closePrivateChannel = function (channelId: string, ...rest: any[]) {
                     if (channelId === SystemChannelId) {
-                        showToast("Ce salon ne peut pas être fermé", Toasts.Type.FAILURE);
+                        showToast({ text: "Ce salon ne peut pas être fermé", variant: "critical" });
                         return;
                     }
                     return closeOriginal(channelId, ...rest);
@@ -1617,10 +1708,9 @@ export default definePlugin({
                 const guildId = invite.invite.guild_id;
                 const channelId = invite.invite.channel.id;
                 if (!guildId) {
-                    Toasts.show({
-                        message: `${window.BotClientNative.getBotClientName()} cannot join guilds`,
-                        id: Toasts.genId(),
-                        type: Toasts.Type.FAILURE,
+                    showToast({
+                        text: `${window.BotClientNative.getBotClientName()} cannot join guilds`,
+                        variant: "critical",
                     });
                     throw new Error(`${window.BotClientNative.getBotClientName()} cannot join guilds`);
                 } else {
@@ -1636,19 +1726,17 @@ export default definePlugin({
                         await LoginToken.loginToken(GetToken.getToken());
                         return NavigationRouter.transitionToGuild(guildId, channelId);
                     } else {
-                        Toasts.show({
-                            message: `${window.BotClientNative.getBotClientName()} cannot join guilds`,
-                            id: Toasts.genId(),
-                            type: Toasts.Type.FAILURE,
+                        showToast({
+                            text: `${window.BotClientNative.getBotClientName()} cannot join guilds`,
+                            variant: "critical",
                         });
                         throw new Error(`${window.BotClientNative.getBotClientName()} cannot join guilds`);
                     }
                 }
             } else {
-                Toasts.show({
-                    message: `${window.BotClientNative.getBotClientName()} cannot join guilds`,
-                    id: Toasts.genId(),
-                    type: Toasts.Type.FAILURE,
+                showToast({
+                    text: `${window.BotClientNative.getBotClientName()} cannot join guilds`,
+                    variant: "critical",
                 });
                 return Promise.reject(`${window.BotClientNative.getBotClientName()} cannot join guilds`);
             }
@@ -1664,11 +1752,11 @@ export default definePlugin({
     },
     chatBarButton: {
         icon: IconEmbedSvg,
-        render: CreateAdvancedMessageEditor,
+        render: CreateMessageEditor,
     },
     messagePopoverButton: {
         icon: IconEmbedSvg,
-        render: EditAdvancedMessageEditor,
+        render: EditMessageEditor,
     },
     /**
      * Discord's shop, Nitro and quests need the payment machinery Nebula does not carry,
@@ -1913,6 +2001,7 @@ export default definePlugin({
         );
 
         this.applyGlobalPatches();
+        void this.getApplicationEmojis();
     },
     stop() {
         // Editor window may have been opened without completing the port handshake, leaving a dangling "message" listener and an open port
@@ -1925,6 +2014,7 @@ export default definePlugin({
             window.editorPort = null;
         }
         this.removeGlobalPatches();
+        applicationEmojiHelpers.clearApplicationEmojis();
     },
     // Utils
     throttle<T extends (...args: any[]) => void>(func: T, getDelay: () => number): (...args: Parameters<T>) => void {
@@ -2380,48 +2470,19 @@ export default definePlugin({
         const state = multiTokenState.value;
         if (!state) return;
         if (!RegExToken.test(state.trim())) {
-            showToast("Login Failure: Invalid token", Toasts.Type.FAILURE);
+            showToast({ text: "Login Failure: Invalid token", variant: "critical" });
             BotClientLogger.error("Login Failure: Invalid token", state);
             return;
         }
         originalSessionStorage.setItem("currentShard", "0");
         LoginToken.loginToken(state);
     },
-    async fixPreloadedUserSettings() {
-        let userId = GetApplicationId.getId();
-        const stopTime = Date.now() + 10000;
-        while (!userId) {
-            if (Date.now() > stopTime) {
-                BotClientLogger.error("Failed to get application ID after 10 seconds");
-                return;
-            }
-            await new Promise(r => setTimeout(r, 100));
-            userId = GetApplicationId.getId();
-        }
-        FluxDispatcher.dispatch({
-            type: "USER_SETTINGS_PROTO_UPDATE",
-            local: true,
-            partial: false,
-            settings: {
-                type: 1,
-                proto: await this.db.getPreloadedUserSettings(userId),
-            },
-        });
-    },
-    getApplicationEmojis() {
-        this.console.debug("Fetching Application Emojis");
-        return new Promise(resolve => {
-            RestAPI.get({
-                // TODO: Use the correct endpoint for fetching emojis
-                url: "/users/@me/emojis",
-            })
-                .then(d => {
-                    window.applicationEmojis = d.body;
-                    resolve(d.body);
-                })
-                .catch(() => resolve([]));
-        });
-    },
+    ...applicationEmojiHelpers,
+    ...directMessageHelpers,
+    ...settingsProtoHelpers,
+    renderApplicationEmojiIcon: ErrorBoundary.wrap(({ className, width = 24, height = 24 }: { className?: string; width?: number; height?: number; }) => (
+        <img className={className} width={width} height={height} src={UserStore.getCurrentUser()?.getAvatarURL()} alt="" style={{ borderRadius: "50%" }} />
+    ), { noop: true }),
     // Debug
     get console() {
         return BotClientLogger;
@@ -2441,6 +2502,17 @@ export default definePlugin({
     doIdentifyFirstPatch,
     openPrivateChannelPatch,
     isUserAccountSession,
+    /*
+     * « Go Live » n'existe pas pour un bot : la passerelle des bots ne porte pas les
+     * opérations de partage, et les envoyer quand même ferait fermer la connexion. Le
+     * bouton reste donc sans effet — autant le dire, plutôt que de ne rien faire.
+     */
+    botCannotStream() {
+        showToast({
+            text: "Un bot ne peut pas partager son écran : Discord réserve « Go Live » aux comptes utilisateurs. Connecte-toi avec un compte pour partager.",
+            variant: "critical",
+        });
+    },
     /** Bot accounts identify with intents and a shard, user accounts must not */
     identifyExtra(botInfo: any) {
         if (botInfo?.isUserAccount) return {};

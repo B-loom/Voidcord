@@ -46,7 +46,7 @@ export default class Constants extends null {
     static UserAgentBrowser =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
     static ChromeVersion = "131.0.0.0";
-    static ClientBuildNumber = 589596;
+    static ClientBuildNumber = 657850;
     static AuthDomain = "canary.discord.com";
     static superProperties () {
         return Buffer.from(
@@ -70,7 +70,6 @@ export default class Constants extends null {
     }
     static VencordExtensionPath = path.join(app.getAppPath(), "VencordExtension");
     static DiscordHTMLPath = path.join(app.getAppPath(), "assets", "snapshot", "index.html");
-    static ConfigEditorHTMLPath = path.join(app.getAppPath(), "assets", "config", "index.html");
     static AccountLoginHTMLPath = path.join(app.getAppPath(), "assets", "account", "index.html");
     static CaptchaHTMLPath = path.join(app.getAppPath(), "assets", "account", "captcha.html");
     static BrandingPath = path.join(app.getAppPath(), "assets", "branding");
@@ -125,7 +124,6 @@ export default class Constants extends null {
     static enableFeatures = [];
     static disableFeatures = [
         "CalculateNativeWinOcclusion",
-        "OutOfBlinkCors",
         "WinRetrieveSuggestionsOnlyOnDemand",
         "HardwareMediaKeyHandling",
         "MediaSessionService",

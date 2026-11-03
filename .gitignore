@@ -94,6 +94,7 @@ out
 /build
 /VencordExtension
 /assets/editor
+/plans/
 
 # Gatsby files
 .cache/

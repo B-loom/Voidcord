@@ -38,6 +38,8 @@ dans une seule application : une fenêtre par compte, le même client pour tous.
 > puis je la reprends ici. Il peut donc s'écouler du temps entre le moment où quelque
 > chose casse et le moment où c'est réparé.
 
+\`requirement\` installs the root lockfile, checks out the pinned Vencord, BotClient plugin, and Discohook revisions from \`scripts/build-dependencies.json\`. Existing checkouts are never reset; a mismatched revision stops with an error so local work is not lost. \`build\` packages locally without publishing. Maintainers should use the [release process](docs/release-process.md) for tags and artifacts. After building, run \`npm run typecheck\` for TypeScript and \`npm test\` on Windows for the Electron integration suite. Use \`npm start\` to launch the app.
+
 ---
 
 ## Le site
@@ -101,15 +103,30 @@ rien ici. Avec un compte utilisateur, le client Discord habituel revient.
 
 - **Détection des jeux** : le jeu en cours apparaît sur le profil, sans le client officiel.
 - **Éditeur de messages** : embeds, boutons, fichiers et catalogue d'émojis, pour les bots.
+  L'ancien éditeur d'embed, plus simple, reste disponible dans les réglages du plugin
+  BotClient.
 - **Apparence** : un plugin pour changer le nom affiché et choisir ses badges. Purement
   visuel, rien n'est envoyé à Discord.
 - **Interface en français**, y compris les messages d'erreur.
+
+## Réglages
+
+Un clic droit sur l'icône dans la zone de notification, puis **Paramètres**, ouvre la
+fenêtre des réglages : style de l'écran de démarrage, DNS chiffré et choix du
+fournisseur, proxy du système, nombre de serveurs par shard, recherche automatique des
+mises à jour. Une recherche en haut de la fenêtre retrouve un réglage par son nom.
+
+Certains réglages ne prennent effet qu'au lancement suivant ; la fenêtre le dit pour
+chacun d'eux.
 
 ## Mises à jour
 
 Nebula regarde, peu après son démarrage, s'il existe une version plus récente sur la page
 des releases de ce dépôt. Si c'est le cas, une notification te le dit et la mise à jour se
 télécharge en arrière-plan ; elle s'installe à la fermeture de l'application.
+
+Cette recherche peut être coupée dans les réglages ; la recherche manuelle, depuis
+l'onglet **Nebula**, reste possible.
 
 Les nouveautés de chaque version sont dans l'onglet **Nebula → Nouveautés** du client, et
 cette page est le texte que tu lis dans **Nebula → Documentation**.
@@ -129,6 +146,107 @@ Nebula en est une modification personnelle, écrite avec Claude.
 `;
 
 export const CHANGELOG = `# Nouveautés
+
+## v1.2.8 — La base passe à DiscordBotClient 3.10.3
+
+Tout le cœur de l'application a été repris sur la version 3.10.3 du projet d'origine,
+avec ce qu'elle apporte, et les ajouts de Nebula ont été reportés dessus un par un.
+
+### Nouveautés venues de la 3.10.3
+- **Un écran de démarrage**, en deux styles au choix : moderne, ou à la manière de
+  Discord. Il dit aussi ce qui se passe quand le démarrage échoue, avec un bouton pour
+  réessayer.
+- **Une vraie fenêtre de réglages**, avec une recherche, en remplacement de l'éditeur de
+  configuration où il fallait écrire le fichier à la main. Elle est en français.
+- **Le DNS chiffré accepte plusieurs fournisseurs** (Cloudflare, Google, Quad9), et on
+  peut désormais suivre le proxy du système au lieu des connexions directes.
+- **La recherche de mise à jour au démarrage peut être coupée.**
+- **La limite d'envoi passe à 20 Mo.**
+- **L'ancien éditeur d'embed est de retour**, à activer dans les réglages du plugin
+  BotClient si tu le préfères à l'éditeur de message.
+- **Les emojis d'application apparaissent dans le sélecteur d'emojis.**
+- Depuis « Nouveau message », on peut **ouvrir un message privé avec quelqu'un à partir
+  de son identifiant**.
+
+### Corrections venues de la 3.10.3
+- Le jeton du bot est **vérifié avant certaines requêtes internes**.
+- Des **commandes slash qui manquaient** sont revenues.
+- Un **message de plus de 2 000 caractères** ne casse plus l'envoi.
+- Les salons **Forum et Média** ne restent plus bloqués sur leur squelette de chargement.
+- Le chargement du **profil d'un utilisateur** ne tombe plus en panne quand les données
+  d'application manquent.
+- Une erreur dans un échange interne (IPC) **ne fige plus l'application**.
+- Plusieurs défauts de gestion des fenêtres, et le **serveur local renforcé** après des
+  signalements de sécurité.
+- Les protocoles sont traités plus vite, et des allers-retours inutiles entre le client et
+  le processus principal ont disparu.
+
+### Côté Nebula
+- Les **fenêtres de client supplémentaires** (une par compte) ont été recollées au
+  nouveau contrôle d'accès du processus principal : sans cela, elles n'avaient plus le
+  droit de lui parler, et la barre de titre d'une deuxième fenêtre agissait sur la
+  première.
+- Le DNS chiffré reste **sur Cloudflare par défaut**, comme avant.
+- Discord est épinglé sur la version stable 657850, Vencord sur la 1.15.15. Vencord y a
+  retiré d'anciens composants : les écrans de Nebula ont été adaptés.
+- **Nouvelle image au démarrage**, et le tracé au trait qui la précède a été refait à
+  partir d'elle. Le bouton de crédit a disparu avec l'ancienne illustration : Nebula ne
+  revendique plus d'auteur pour l'image affichée.
+
+### Corrigé dans la foulée
+- **La connexion avec un compte Discord était refusée** par « expéditeur IPC non
+  autorisé ». Le nouveau contrôle d'accès de la 3.10.3 n'autorisait que la fenêtre de
+  connexion séparée, alors que Nebula dessine l'écran d'ajout de compte à l'intérieur
+  de Discord depuis la 1.2.7. Les deux sont acceptés, et eux seuls.
+- **Les textes de l'écran d'ajout de compte étaient illisibles**, noirs sur fond sombre.
+  Discord a renommé ses couleurs dans le build 657850 : \`--text-normal\`,
+  \`--header-primary\` et \`--header-secondary\` n'existent plus, et une couleur introuvable
+  ne s'applique pas du tout. Chaque couleur empruntée à Discord a maintenant un repli.
+  Les écrans de partage d'écran, de connexion par token et l'onglet Nebula étaient
+  touchés par le même défaut.
+- **Les messages d'erreur revenus en anglais** sont retraduits : l'expéditeur IPC, le
+  jeton de bot invalide, l'avertissement sur l'intent MessageContent, les erreurs de
+  configuration et la confirmation de suppression des données. L'écran d'ajout de compte
+  n'affiche plus l'habillage d'Electron (« Error invoking remote method... ») autour du
+  message.
+- **Un bot qui essaie de partager son écran le sait enfin.** Le bouton ne faisait rien :
+  Discord réserve « Go Live » aux comptes utilisateurs, et la passerelle des bots ne
+  porte pas ces opérations. Un message le dit désormais au lieu du silence.
+- **Le partage d'écran ne démarrait plus du tout**, même avec un compte utilisateur. Le
+  durcissement de la 3.10.3 n'acceptait les demandes « media » qu'avec du son et sans
+  image — or une demande de partage d'écran arrive avec une liste de types **vide**. Elle
+  était donc refusée en une milliseconde, avant même que le sélecteur de Nebula existe.
+  La caméra, elle, reste refusée. Cette décision vit maintenant dans une fonction à
+  part, et un test épingle les huit cas : elle ne pourra plus changer en silence.
+- **Un fichier de 12 Mo était refusé** avec « Max file size is 1.00 GB », ce qui ne
+  voulait rien dire. Discord a relevé sa limite par défaut à 20 Mio le 3 septembre 2026 ;
+  la 3.10.3 n'a relevé que les paliers Nitro, laissant 10 Mio à tous les autres — donc à
+  tous les bots. Le plancher est remonté à 20 Mio. Au-delà, il faut un serveur boosté :
+  50 Mo au palier 2, 100 Mo au palier 3.
+- **Le pavé rouge derrière le bouton micro**, quand il est coupé, ne s'affiche plus.
+  L'icône barrée suffisait.
+
+### Partage d'écran
+- **La qualité et le nombre d'images par seconde se choisissent** dans le sélecteur, au
+  moment de partager : 720p, 1080p, 1440p ou la définition de la source, à 15, 30 ou 60
+  images par seconde. Le choix est retenu d'un partage à l'autre. C'est un plafond posé
+  sur la capture : Discord réencode ensuite pour la voix, et peut descendre en dessous.
+
+### Autres corrections
+- **Une invitation ouverte depuis le client** affichait encore la page « Discord App
+  Detected », qui propose d'ouvrir une application de bureau — un cul-de-sac, puisque
+  Nebula *est* l'application. Le détour n'était fait que pour les liens ouverts dans une
+  nouvelle fenêtre ; il l'est maintenant aussi quand le lien s'ouvre sur place.
+- **Chaque fermeture de la passerelle est désormais inscrite au journal** avec son code
+  et sa raison, dans \`%APPDATA%\\Nebula\\logs\\main.log\`. Une déconnexion « sans raison »
+  laissera ainsi de quoi la comprendre.
+- Les deux derniers messages d'erreur de connexion restés en anglais sont traduits.
+
+### Nouveau plugin
+- **NebulaPlateforme** choisit l'appareil depuis lequel tu as l'air de te connecter :
+  ordinateur, navigateur, téléphone Android, iPhone, console ou casque VR. C'est la
+  pastille que les autres voient à côté de ton nom. Le changement prend effet à la
+  connexion suivante.
 
 ## v1.2.7 — Partage d'écran, fenêtres intégrées et ménage
 

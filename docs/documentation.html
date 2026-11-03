@@ -17,7 +17,7 @@
     <a class="brand" href="index.html">
         <img src="icon.png" alt="">
         <span>Nebula</span>
-        <span class="version">v1.2.7</span>
+        <span class="version">v1.2.8</span>
     </a>
     <div class="nav-links"><a class="nav-link" href="index.html">Accueil</a><a class="nav-link current" href="documentation.html">Documentation</a><a class="nav-link" href="changelog.html">Nouveautés</a><a class="nav-link" href="licence.html">Licence</a></div>
 </nav>
@@ -33,6 +33,7 @@
 <blockquote><p><strong>Un client tiers est contraire aux conditions d'utilisation de Discord.</strong> Se connecter</p><p>avec un compte utilisateur depuis autre chose que le client officiel peut entraîner la</p><p>désactivation de ce compte. Les bots, eux, utilisent l'API officielle et ne posent pas</p><p>ce problème.</p></blockquote>
 <blockquote><p><strong>Nebula n'est pas un projet original.</strong> C'est une version modifiée de</p><p><strong><a href="https://github.com/aiko-chan-ai/DiscordBotClient">aiko-chan-ai/DiscordBotClient</a></strong>,</p><p>à qui revient tout le travail de fond. Merci à l'auteur.</p></blockquote>
 <blockquote><p><strong>Les mises à jour de Discord ne viennent pas de moi.</strong> Quand Discord change et que le</p><p>client casse, j'attends que <strong>aiko-chan-ai</strong> publie une mise à jour du projet d'origine,</p><p>puis je la reprends ici. Il peut donc s'écouler du temps entre le moment où quelque</p><p>chose casse et le moment où c'est réparé.</p></blockquote>
+<p><code>requirement</code> installs the root lockfile, checks out the pinned Vencord, BotClient plugin, and Discohook revisions from <code>scripts/build-dependencies.json</code>. Existing checkouts are never reset; a mismatched revision stops with an error so local work is not lost. <code>build</code> packages locally without publishing. Maintainers should use the <a href="docs/release-process.md">release process</a> for tags and artifacts. After building, run <code>npm run typecheck</code> for TypeScript and <code>npm test</code> on Windows for the Electron integration suite. Use <code>npm start</code> to launch the app.</p>
 <hr>
 <h2>Le site</h2>
 <p><strong>https://b-loom.github.io/discord-bot-client-Nebula/</strong></p>
@@ -71,11 +72,20 @@
 <p>Les pages concernées ne sont pas cachées : elles expliquent pourquoi elles ne servent à</p>
 <p>rien ici. Avec un compte utilisateur, le client Discord habituel revient.</p>
 <h2>Ce que Nebula ajoute</h2>
-<ul><li><strong>Détection des jeux</strong> : le jeu en cours apparaît sur le profil, sans le client officiel.</li><li><strong>Éditeur de messages</strong> : embeds, boutons, fichiers et catalogue d'émojis, pour les bots.</li><li><strong>Apparence</strong> : un plugin pour changer le nom affiché et choisir ses badges. Purement visuel, rien n'est envoyé à Discord.</li><li><strong>Interface en français</strong>, y compris les messages d'erreur.</li></ul>
+<ul><li><strong>Détection des jeux</strong> : le jeu en cours apparaît sur le profil, sans le client officiel.</li><li><strong>Éditeur de messages</strong> : embeds, boutons, fichiers et catalogue d'émojis, pour les bots. L'ancien éditeur d'embed, plus simple, reste disponible dans les réglages du plugin BotClient.</li><li><strong>Apparence</strong> : un plugin pour changer le nom affiché et choisir ses badges. Purement visuel, rien n'est envoyé à Discord.</li><li><strong>Interface en français</strong>, y compris les messages d'erreur.</li></ul>
+<h2>Réglages</h2>
+<p>Un clic droit sur l'icône dans la zone de notification, puis <strong>Paramètres</strong>, ouvre la</p>
+<p>fenêtre des réglages : style de l'écran de démarrage, DNS chiffré et choix du</p>
+<p>fournisseur, proxy du système, nombre de serveurs par shard, recherche automatique des</p>
+<p>mises à jour. Une recherche en haut de la fenêtre retrouve un réglage par son nom.</p>
+<p>Certains réglages ne prennent effet qu'au lancement suivant ; la fenêtre le dit pour</p>
+<p>chacun d'eux.</p>
 <h2>Mises à jour</h2>
 <p>Nebula regarde, peu après son démarrage, s'il existe une version plus récente sur la page</p>
 <p>des releases de ce dépôt. Si c'est le cas, une notification te le dit et la mise à jour se</p>
 <p>télécharge en arrière-plan ; elle s'installe à la fermeture de l'application.</p>
+<p>Cette recherche peut être coupée dans les réglages ; la recherche manuelle, depuis</p>
+<p>l'onglet <strong>Nebula</strong>, reste possible.</p>
 <p>Les nouveautés de chaque version sont dans l'onglet <strong>Nebula → Nouveautés</strong> du client, et</p>
 <p>cette page est le texte que tu lis dans <strong>Nebula → Documentation</strong>.</p>
 <h2>Un bug, une question ?</h2>

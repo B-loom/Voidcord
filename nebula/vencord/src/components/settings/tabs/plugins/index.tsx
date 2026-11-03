@@ -21,10 +21,11 @@ import "./styles.css";
 import * as DataStore from "@api/DataStore";
 import { isPluginEnabled } from "@api/PluginManager";
 import { useSettings } from "@api/Settings";
+import { Button } from "@components/Button";
 import { Card } from "@components/Card";
 import { Divider } from "@components/Divider";
 import ErrorBoundary from "@components/ErrorBoundary";
-import { Heading, HeadingTertiary } from "@components/Heading";
+import { Heading } from "@components/Heading";
 import { Paragraph } from "@components/Paragraph";
 import { SettingsTab, wrapTab } from "@components/settings/tabs/BaseTab";
 import { ChangeList } from "@utils/ChangeList";
@@ -37,7 +38,7 @@ import { PluginTarget } from "@utils/pluginTargets";
 import { promptToRestart } from "@utils/promptToRestart";
 import { useAwaiter, useCleanupEffect } from "@utils/react";
 import { PluginTag, PluginTags } from "@utils/types";
-import { Button, lodash, React, SearchableSelect, Select, TextInput, Tooltip, useMemo, useRef, useState } from "@webpack/common";
+import { lodash, React, SearchableSelect, Select, TextInput, Tooltip, useMemo, useRef, useState } from "@webpack/common";
 import { JSX } from "react";
 
 import Plugins, { ExcludedPlugins, PluginMeta } from "~plugins";
@@ -54,9 +55,9 @@ function ReloadRequiredCard({ required }: { required: boolean; }) {
             {required
                 ? (
                     <>
-                        <HeadingTertiary>Restart required!</HeadingTertiary>
+                        <Heading tag="h4">Redémarrage nécessaire</Heading>
                         <Paragraph className={cl("dep-text")}>
-                            Restart now to apply new plugins and their settings
+                            Redémarre maintenant pour appliquer les nouveaux plugins et leurs réglages
                         </Paragraph>
                         <Button onClick={() => location.reload()} className={cl("restart-button")}>
                             Redémarrer
@@ -65,7 +66,7 @@ function ReloadRequiredCard({ required }: { required: boolean; }) {
                 )
                 : (
                     <>
-                        <HeadingTertiary>Gestion des plugins</HeadingTertiary>
+                        <Heading tag="h4">Gestion des plugins</Heading>
                         <Paragraph>Clique sur la roue dentée ou l’icône d’information pour en savoir plus sur un plugin</Paragraph>
                         <Paragraph>Les plugins munis d’une roue dentée ont des réglages que tu peux modifier.</Paragraph>
                     </>
@@ -127,7 +128,7 @@ function PluginSettings() {
         if (changes.hasChanges)
             promptToRestart("reload", {
                 children: <>
-                    <Heading tag="h5">The following plugins require a restart:</Heading>
+                    <Heading className={Margins.bottom8}>Ces plugins demandent un redémarrage :</Heading>
                     <Paragraph>{Array.from(changes, k => k.split(".")[0]).join(", ")}</Paragraph>
                 </>
             });
@@ -270,9 +271,9 @@ function PluginSettings() {
 
             {nebulaPlugins.length > 0 && (
                 <>
-                    <HeadingTertiary className={classes(Margins.top20, Margins.bottom8)}>
+                    <Heading tag="h4" className={classes(Margins.top20, Margins.bottom8)}>
                         Plugins Nebula
-                    </HeadingTertiary>
+                    </Heading>
                     <Paragraph className={Margins.bottom8}>
                         Écrits pour ce client, et absents de Vencord.
                     </Paragraph>
@@ -281,9 +282,9 @@ function PluginSettings() {
                 </>
             )}
 
-            <HeadingTertiary className={classes(Margins.top20, Margins.bottom8)}>
+            <Heading tag="h4" className={classes(Margins.top20, Margins.bottom8)}>
                 Filtres
-            </HeadingTertiary>
+            </Heading>
 
             <ErrorBoundary noop>
                 <TextInput
@@ -324,7 +325,7 @@ function PluginSettings() {
                 </div>
             </ErrorBoundary>
 
-            <HeadingTertiary className={Margins.top20}>Plugins Vencord</HeadingTertiary>
+            <Heading tag="h4" className={Margins.top20}>Plugins Vencord</Heading>
 
             {plugins.length || requiredPlugins.length
                 ? (
@@ -341,9 +342,9 @@ function PluginSettings() {
 
             <Divider className={Margins.top20} />
 
-            <HeadingTertiary className={classes(Margins.top20, Margins.bottom8)}>
+            <Heading tag="h4" className={classes(Margins.top20, Margins.bottom8)}>
                 Plugins nécessaires
-            </HeadingTertiary>
+            </Heading>
 
             <div className={cl("grid")}>
                 {requiredPlugins.length

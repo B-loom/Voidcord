@@ -12,11 +12,11 @@
 
 .vc-nebula-account-title {
     margin: 0;
-    color: var(--header-primary);
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
 }
 
 .vc-nebula-account-subtitle {
-    color: var(--text-muted);
+    color: var(--text-muted, var(--text-subtle, #949ba4));
     font-size: 14px;
 }
 
@@ -26,7 +26,7 @@
 
 .vc-nebula-account-label {
     margin: 16px 0 6px;
-    color: var(--header-secondary);
+    color: var(--header-secondary, var(--text-muted, #b5bac1));
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -40,7 +40,7 @@
 
 .vc-nebula-account-separator {
     margin: 22px 0 4px;
-    color: var(--text-muted);
+    color: var(--text-muted, var(--text-subtle, #949ba4));
     font-size: 12px;
     text-align: center;
     text-transform: uppercase;
@@ -51,7 +51,7 @@
     padding: 10px 12px;
     border-left: 3px solid var(--status-danger, #f23f43);
     border-radius: 6px;
-    background: var(--background-secondary-alt);
+    background: var(--background-secondary-alt, var(--background-base-low, #232428));
     color: var(--status-danger, #f23f43);
     font-size: 14px;
 }
@@ -69,7 +69,7 @@
     border: none;
     border-radius: 7px;
     background: transparent;
-    color: var(--text-muted);
+    color: var(--text-muted, var(--text-subtle, #949ba4));
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
@@ -77,13 +77,13 @@
 }
 
 .vc-nebula-account-method:hover {
-    background: var(--background-modifier-hover);
-    color: var(--header-primary);
+    background: var(--background-modifier-hover, rgb(255 255 255 / 5%));
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
 }
 
 .vc-nebula-account-method-current {
     background: var(--brand-experiment-15a, rgb(88 101 242 / 15%));
-    color: var(--header-primary);
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
 }
 
 .vc-nebula-account-done {
@@ -96,7 +96,7 @@
  */
 .vc-nebula-account-content input,
 .vc-nebula-account-content input::placeholder {
-    color: var(--text-normal) !important;
+    color: var(--text-normal, var(--text-default, #dbdee1)) !important;
 }
 
 .vc-nebula-account-content input::placeholder {

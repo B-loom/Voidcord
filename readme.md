@@ -27,6 +27,8 @@ dans une seule application : une fenêtre par compte, le même client pour tous.
 > puis je la reprends ici. Il peut donc s'écouler du temps entre le moment où quelque
 > chose casse et le moment où c'est réparé.
 
+`requirement` installs the root lockfile, checks out the pinned Vencord, BotClient plugin, and Discohook revisions from `scripts/build-dependencies.json`. Existing checkouts are never reset; a mismatched revision stops with an error so local work is not lost. `build` packages locally without publishing. Maintainers should use the [release process](docs/release-process.md) for tags and artifacts. After building, run `npm run typecheck` for TypeScript and `npm test` on Windows for the Electron integration suite. Use `npm start` to launch the app.
+
 ---
 
 ## Le site
@@ -90,15 +92,30 @@ rien ici. Avec un compte utilisateur, le client Discord habituel revient.
 
 - **Détection des jeux** : le jeu en cours apparaît sur le profil, sans le client officiel.
 - **Éditeur de messages** : embeds, boutons, fichiers et catalogue d'émojis, pour les bots.
+  L'ancien éditeur d'embed, plus simple, reste disponible dans les réglages du plugin
+  BotClient.
 - **Apparence** : un plugin pour changer le nom affiché et choisir ses badges. Purement
   visuel, rien n'est envoyé à Discord.
 - **Interface en français**, y compris les messages d'erreur.
+
+## Réglages
+
+Un clic droit sur l'icône dans la zone de notification, puis **Paramètres**, ouvre la
+fenêtre des réglages : style de l'écran de démarrage, DNS chiffré et choix du
+fournisseur, proxy du système, nombre de serveurs par shard, recherche automatique des
+mises à jour. Une recherche en haut de la fenêtre retrouve un réglage par son nom.
+
+Certains réglages ne prennent effet qu'au lancement suivant ; la fenêtre le dit pour
+chacun d'eux.
 
 ## Mises à jour
 
 Nebula regarde, peu après son démarrage, s'il existe une version plus récente sur la page
 des releases de ce dépôt. Si c'est le cas, une notification te le dit et la mise à jour se
 télécharge en arrière-plan ; elle s'installe à la fermeture de l'application.
+
+Cette recherche peut être coupée dans les réglages ; la recherche manuelle, depuis
+l'onglet **Nebula**, reste possible.
 
 Les nouveautés de chaque version sont dans l'onglet **Nebula → Nouveautés** du client, et
 cette page est le texte que tu lis dans **Nebula → Documentation**.

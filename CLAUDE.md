@@ -17,6 +17,13 @@ application, dérivé de [aiko-chan-ai/DiscordBotClient](https://github.com/aiko
 `Vencord/` est un clone jetable. `npm run requirement` le remet à zéro par un
 `git reset --hard`, et il est exclu de git.
 
+Depuis la 1.2.8, Vencord et le plugin botClient sont **épinglés** sur une révision
+précise, listée dans `scripts/build-dependencies.json`. Monter de version, c'est changer
+ces deux empreintes puis refaire tourner `npm run requirement` — et vérifier le calque,
+car Vencord retire régulièrement des composants (`Forms`, `Text`, `Button` et `Switch` ont
+disparu de `@webpack/common` en 1.15.15 ; `components/legacyUi.tsx`, dans le calque,
+rebâtit l'ancienne forme pour les écrans de Nebula).
+
 Tout le code écrit pour Vencord — le plugin Nebula, NebulaApparence, les traductions
 françaises, les retouches aux pages de réglages — vit dans **`nebula/vencord/`**, qui est
 versionné. `scripts/applyNebulaOverlay.mjs` le recopie sur le clone avant chaque
@@ -40,6 +47,28 @@ clone. L'inverse annulerait la synchronisation en silence — c'est arrivé une 
 
 Ne jamais modifier à la main `docs/*.html` ni le `README` dans `docs.ts` : la modification
 serait écrasée au build suivant.
+
+## Les réglages ne sont plus un fichier à éditer
+
+L'éditeur Monaco de `assets/config/` a disparu avec la 3.10.3 d'origine. Les réglages
+vivent maintenant dans une vraie fenêtre : le schéma est dans `src/shared/Settings.ts`
+(une seule source pour le formulaire et la validation IPC), l'interface React dans
+`src/Renderer/Settings/`, compilée à part par Vite (`npm run build:settings`, appelé par
+`build:ts`). Ajouter un réglage, c'est ajouter une entrée à `settingsDefinitions` : le
+formulaire et la validation suivent.
+
+Les preloads ont déménagé dans `src/AppCore/Preloads/`, et les fenêtres autres que le
+client dans `src/AppCore/Windows/`.
+
+## Le contrôle d'accès IPC, et les fenêtres de Nebula
+
+La 3.10.3 a fermé l'IPC : chaque gestionnaire vérifie que l'appel vient bien de la
+fenêtre Discord (`isTrustedAppFrame`). Nebula ouvre une fenêtre de client **par compte**,
+qui n'est pas cette fenêtre-là : `isTrustedClientFrame` (dans `IPCManager.ts`) élargit le
+contrôle à ces fenêtres, et `isAccountWindowFrame` réserve les gestionnaires qui touchent
+aux comptes enregistrés à la fenêtre de connexion et à son captcha. Un gestionnaire
+ajouté sans l'un des deux renvoie `null` dans les fenêtres supplémentaires — sans erreur
+visible.
 
 ## Numérotation des versions
 

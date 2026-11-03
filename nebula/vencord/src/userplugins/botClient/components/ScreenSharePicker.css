@@ -11,7 +11,7 @@
 }
 
 .vc-nebula-share-subtitle {
-    color: var(--text-muted);
+    color: var(--text-muted, var(--text-subtle, #949ba4));
     font-size: 14px;
 }
 
@@ -31,7 +31,7 @@
     border: none;
     border-radius: 7px;
     background: transparent;
-    color: var(--text-muted);
+    color: var(--text-muted, var(--text-subtle, #949ba4));
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
@@ -39,13 +39,13 @@
 }
 
 .vc-nebula-share-tab:hover {
-    background: var(--background-modifier-hover);
-    color: var(--header-primary);
+    background: var(--background-modifier-hover, rgb(255 255 255 / 5%));
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
 }
 
 .vc-nebula-share-tab-current {
     background: var(--brand-experiment-15a, rgb(88 101 242 / 15%));
-    color: var(--text-brand, var(--header-primary));
+    color: var(--text-brand, var(--header-primary, var(--text-strong, #f2f3f5)));
 }
 
 .vc-nebula-share-grid {
@@ -59,7 +59,7 @@
     padding: 8px;
     border: 2px solid transparent;
     border-radius: 10px;
-    background: var(--background-secondary);
+    background: var(--background-secondary, var(--background-base-lower, #2b2d31));
     color: inherit;
     font-family: inherit;
     text-align: left;
@@ -67,12 +67,12 @@
 }
 
 .vc-nebula-share-source:hover {
-    background: var(--background-secondary-alt);
+    background: var(--background-secondary-alt, var(--background-base-low, #232428));
 }
 
 .vc-nebula-share-source-selected {
     border-color: var(--brand-500, #5865f2);
-    background: var(--background-secondary-alt);
+    background: var(--background-secondary-alt, var(--background-base-low, #232428));
 }
 
 .vc-nebula-share-thumb {
@@ -87,7 +87,7 @@
     display: block;
     margin-top: 8px;
     overflow: hidden;
-    color: var(--header-primary);
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
     font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -95,7 +95,7 @@
 
 .vc-nebula-share-empty {
     padding: 40px 0;
-    color: var(--text-muted);
+    color: var(--text-muted, var(--text-subtle, #949ba4));
     text-align: center;
 }
 
@@ -105,7 +105,52 @@
     gap: 8px;
     align-items: center;
     margin-right: auto;
-    color: var(--text-muted);
+    color: var(--text-muted, var(--text-subtle, #949ba4));
     font-size: 14px;
     cursor: pointer;
+}
+
+/* Les deux rangées de choix sous les vignettes : qualité et images par seconde */
+.vc-nebula-share-quality {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.vc-nebula-share-quality-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.vc-nebula-share-quality-label {
+    min-width: 72px;
+    color: var(--text-muted, var(--text-subtle, #949ba4));
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.vc-nebula-share-chip,
+.vc-nebula-share-chip-current {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-muted, var(--text-subtle, #949ba4));
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vc-nebula-share-chip:hover {
+    background: rgb(255 255 255 / 5%);
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
+}
+
+.vc-nebula-share-chip-current {
+    background: var(--brand-experiment-15a, rgb(88 101 242 / 15%));
+    color: var(--header-primary, var(--text-strong, #f2f3f5));
 }

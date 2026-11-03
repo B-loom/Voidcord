@@ -1,33 +1,96 @@
 /* Copyright Elysia © 2025. All rights reserved */
 
 import { APIApplication, ApplicationFlags, GatewayIntentBits } from "discord-api-types/v10";
-import { app, BrowserWindow, dialog } from "electron";
+import { app, BrowserWindow, dialog, IpcMainEvent, IpcMainInvokeEvent, WebContents } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ApplicationFlagsBitField, IntentsBitField } from "src/AppUtils/DiscordBitField";
 import { ApexExperiment, GuildExperiment, UserExperiment } from "src/AppUtils/Experiments";
 import GameDetection from "src/AppUtils/GameDetection";
+import { cacheValidatedBotToken } from "src/AppUtils/ValidateBotToken";
 
-import { DiscordBotClient } from ".";
+import type { DiscordBotClient } from ".";
 import Constants from "./Constants";
 import { IPCEvent } from "./IPCEvents";
 import UserAuth from "./UserAuth";
 
+export function isTrustedAppFrame (event: IpcMainEvent | IpcMainInvokeEvent, contents: WebContents | undefined): boolean {
+    if (!contents || event.sender !== contents || event.senderFrame !== contents.mainFrame) return false;
+    try {
+        return new URL(event.senderFrame.url).origin === `https://${Constants.CustomDiscordDomain}`;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Nebula ouvre une fenêtre de client par compte : la fenêtre principale n'est donc pas
+ * la seule à avoir le droit de parler au processus principal. Le contrôle d'origine est
+ * élargi à ces fenêtres, et à elles seules.
+ */
+export function isTrustedClientFrame (event: IpcMainEvent | IpcMainInvokeEvent, mainApp: DiscordBotClient): boolean {
+    if (isTrustedAppFrame(event, mainApp.discordWebContents)) return true;
+    for (const win of mainApp.accountWindows.values()) {
+        if (!win.isDestroyed() && isTrustedAppFrame(event, win.webContents)) return true;
+    }
+    return false;
+}
+
+/**
+ * Les comptes enregistrés se pilotent depuis deux endroits, et deux seulement : la
+ * fenêtre de connexion séparée (avec son captcha, qui charge un fichier local) et
+ * l'écran d'ajout de compte que Nebula dessine à l'intérieur de Discord. Oublier le
+ * second, c'est refuser toute connexion par compte avec « expéditeur IPC non autorisé ».
+ */
+export function isAccountFrame (event: IpcMainEvent | IpcMainInvokeEvent, mainApp: DiscordBotClient): boolean {
+    if (isTrustedClientFrame(event, mainApp)) return true;
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!senderWindow || senderWindow.isDestroyed()) return false;
+    if (event.senderFrame !== event.sender.mainFrame) return false;
+    return senderWindow === mainApp.accountWindow || senderWindow.getParentWindow() === mainApp.accountWindow;
+}
+
+export function isAllowedPopoutURL (url: string, port: number): boolean {
+    if (url === "about:blank") return true;
+    try {
+        const parsed = new URL(url);
+        return parsed.pathname === "/popout" && [
+            "https://discord.com",
+            "https://ptb.discord.com",
+            "https://canary.discord.com",
+            `https://localhost:${port}`,
+        ].includes(parsed.origin);
+    } catch {
+        return false;
+    }
+}
+
 export function setupIPCEvents (mainApp: DiscordBotClient) {
-    /*
-     * The title bar buttons must act on the window they were clicked in. Falling back to
-     * the main window made a second client window minimise or maximise the first one.
-     */
-    const getWindow = (event: Electron.IpcMainEvent, framename: string) => {
-        return (
-            mainApp.childWindows.get(framename) ?? BrowserWindow.fromWebContents(event.sender) ?? mainApp.win
-        );
+    const getWindow = (event: IpcMainEvent, frameName?: string): BrowserWindow | undefined => {
+        if (!event.senderFrame || event.senderFrame !== event.sender.mainFrame) return;
+        if (isTrustedAppFrame(event, mainApp.discordWebContents)) {
+            return frameName ? mainApp.childWindows.get(frameName) : mainApp.appWindow;
+        }
+        /*
+         * Nebula ouvre une fenêtre de client par compte. Les boutons de barre de titre
+         * doivent agir sur la fenêtre où l'on a cliqué : sans cela, un deuxième client
+         * réduisait ou agrandissait le premier.
+         */
+        for (const accountWindow of mainApp.accountWindows.values()) {
+            if (!accountWindow.isDestroyed() && isTrustedAppFrame(event, accountWindow.webContents)) {
+                return frameName ? mainApp.childWindows.get(frameName) : accountWindow;
+            }
+        }
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        if (!senderWindow || ![...mainApp.childWindows.values()].includes(senderWindow)) return;
+        if (isAllowedPopoutURL(event.senderFrame.url, mainApp.port)) return senderWindow;
     };
     mainApp.ipcMain
         .on(IPCEvent.Minimize, (event, frameName) => {
-            getWindow(event, frameName).minimize();
+            getWindow(event, frameName)?.minimize();
         })
         .on(IPCEvent.Maximize, (event, frameName) => {
             const win = getWindow(event, frameName);
+            if (!win) return;
             if (win.isMaximized()) {
                 win.restore();
             } else {
@@ -35,31 +98,32 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
             }
         })
         .on(IPCEvent.Close, (event, frameName) => {
-            if (frameName) {
-                return mainApp.childWindows.get(frameName)?.close();
-            }
-            const win = BrowserWindow.fromWebContents(event.sender);
-            // Only the main window survives being closed, as it lives in the tray
-            if (win && win !== mainApp.win) return win.close();
-            mainApp.win.hide();
+            const win = getWindow(event, frameName);
+            if (!win) return;
+            if (win === mainApp.appWindow) win.hide();
+            else win.close();
         })
         .on(IPCEvent.Focus, (event, frameName) => {
             const win = getWindow(event, frameName);
+            if (!win) return;
+            if (win === mainApp.appWindow && !frameName) return mainApp.showApp();
+            // this.appWindow.focus();
             win.show();
             win.setSkipTaskbar(false);
         })
         .on(IPCEvent.FlashFrame, (event, flag: boolean) => {
-            const win = BrowserWindow.fromWebContents(event.sender) ?? mainApp.win;
+            const win = getWindow(event);
             if (!win || win.isDestroyed() || (flag && win.isFocused())) return;
             win.flashFrame(flag);
         })
         .on(IPCEvent.RequestCloseWindow, event => {
-            const win = BrowserWindow.fromWebContents(event.sender);
-            win?.close();
+            getWindow(event)?.close();
         });
     mainApp.ipcMain.handle(IPCEvent.GetBotInfo, (event, token) => {
-        token = token.replace(/Bot/g, "").trim();
-        return mainApp.session
+        if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
+        if (typeof token !== "string" || token.length > 512) throw new Error("Jeton de bot invalide.");
+        token = token.trim().replace(/^Bot\s+/i, "").trim();
+        return mainApp.discordSession
             .fetch("https://canary.discord.com/api/v9/applications/@me?with_counts=true", {
                 headers: {
                     Authorization: `Bot ${token}`,
@@ -101,10 +165,11 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
                 ) {
                     dialog.showErrorBox(
                         "L’intent MessageContent est requis",
-                        "You need to enable the MessageContent intent in the application settings.\nIf you want to permanently suppress this warning, change the application settings (accessible from the tray menu via right-click)",
+                        "Active l’intent MessageContent dans les réglages de ton application, sur le portail Discord.\nPour ne plus voir cet avertissement, change le réglage correspondant dans les paramètres de Nebula (clic droit sur l’icône de la zone de notification).",
                     );
-                    throw new Error("MESSAGE_CONTENT is required.");
+                    throw new Error("L’intent MessageContent est requis.");
                 }
+                cacheValidatedBotToken(data.bot?.id ?? data.id, token);
                 return {
                     success: true,
                     data,
@@ -131,51 +196,60 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
                 };
             });
     });
-    mainApp.ipcMain.handle(IPCEvent.RequestOpenMessageEditorWindow, () => {
+    mainApp.ipcMain.handle(IPCEvent.RequestOpenMessageEditorWindow, event => {
+        if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return mainApp.openDiscordMessageEditorWindow();
     });
     mainApp.ipcMain
         .on(IPCEvent.GetVersion, event => {
-            return (event.returnValue = app.getVersion());
+            event.returnValue = isTrustedClientFrame(event, mainApp) ? app.getVersion() : null;
         })
         .on(IPCEvent.GetName, event => {
-            return (event.returnValue = app.getName());
+            event.returnValue = isTrustedClientFrame(event, mainApp) ? app.getName() : null;
         })
         .on(IPCEvent.GetExperiment, (event, type, botId, allData) => {
-            if (type === "user") {
+            if (!isTrustedClientFrame(event, mainApp)) {
+                event.returnValue = null;
+            } else if (type === "user") {
                 event.returnValue = UserExperiment(allData, botId);
             } else if (type === "guild") {
                 event.returnValue = GuildExperiment();
             } else if (type === "apex") {
                 event.returnValue = ApexExperiment(botId);
+            } else {
+                event.returnValue = null;
             }
         })
         .on(IPCEvent.GetDefaultUserPatch, event => {
-            event.returnValue = Constants.UserDefaultPatch;
+            event.returnValue = isTrustedClientFrame(event, mainApp) ? Constants.UserDefaultPatch : null;
         })
         .on(IPCEvent.GetIsUserToken, (event, token: string) => {
-            event.returnValue = UserAuth.isUserToken(token ?? "");
+            event.returnValue = isTrustedClientFrame(event, mainApp) ? UserAuth.isUserToken(token ?? "") : null;
         })
         .on(IPCEvent.GetSupportInvite, event => {
-            event.returnValue = Constants.SupportInvite;
+            event.returnValue = isTrustedClientFrame(event, mainApp) ? Constants.SupportInvite : null;
         })
         .on(IPCEvent.GetBotAccountIds, event => {
-            event.returnValue = UserAuth.accounts.filter(a => a.bot && a.id).map(a => a.id as string);
+            event.returnValue = isTrustedClientFrame(event, mainApp)
+                ? UserAuth.accounts.filter(a => a.bot && a.id).map(a => a.id as string)
+                : null;
         })
         .on(IPCEvent.GetRunningGames, event => {
-            event.returnValue = GameDetection.snapshot();
+            event.returnValue = isTrustedClientFrame(event, mainApp) ? GameDetection.snapshot() : null;
         })
         .on(IPCEvent.RememberBot, async (event, token: string) => {
-            if (!token) return;
+            if (!isTrustedClientFrame(event, mainApp) || !token || typeof token !== "string") return;
             await UserAuth.storeBot(token);
             mainApp.setupTray();
         });
     // User Account Login (email + password)
     mainApp.ipcMain.handle(IPCEvent.OpenAccountLoginWindow, event => {
+        if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         // Remember which client window asked, so the account lands in that one
         mainApp.openAccountLoginWindow(BrowserWindow.fromWebContents(event.sender) ?? undefined);
     });
     mainApp.ipcMain.handle(IPCEvent.AccountLogin, async (event, { login, password, captcha }) => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         const result = await UserAuth.login({
             login,
             password,
@@ -187,61 +261,51 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
         return result;
     });
     mainApp.ipcMain.handle(IPCEvent.AccountTokenLogin, async (event, token: string) => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         const result = await UserAuth.loginWithToken(token);
         if (result.status === "success") mainApp.setupTray();
         return result;
     });
     mainApp.ipcMain.handle(IPCEvent.AccountMfa, (event, { ticket, code, method }) => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return UserAuth.mfa({ ticket, code, method });
     });
     mainApp.ipcMain.handle(IPCEvent.AccountSendSms, (event, ticket: string) => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return UserAuth.sendSms(ticket);
     });
     mainApp.ipcMain.handle(IPCEvent.AccountSolveCaptcha, (event, { sitekey, rqdata }) => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return mainApp.openCaptchaWindow(sitekey, rqdata ?? null);
     });
-    mainApp.ipcMain.handle(IPCEvent.AccountList, () => {
+    mainApp.ipcMain.handle(IPCEvent.AccountList, event => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         // The token is needed by the renderer to pick an account, it never leaves the app
         return UserAuth.accounts;
     });
     mainApp.ipcMain.handle(IPCEvent.AccountRemove, (event, token: string) => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         UserAuth.remove(token);
         return UserAuth.accounts;
     });
     mainApp.ipcMain.handle(IPCEvent.AccountUse, (event, token: string) => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return mainApp.loginWithUserToken(token);
     });
     mainApp.ipcMain.handle(IPCEvent.AccountOpenWindow, (event, token: string) => {
+        if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return mainApp.openClientWindow(token);
     });
     // Updates
-    mainApp.ipcMain.handle(IPCEvent.UpdateCheck, () => {
+    mainApp.ipcMain.handle(IPCEvent.UpdateCheck, event => {
+        if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return mainApp.checkingForUpdates(true);
     });
-    mainApp.ipcMain.handle(IPCEvent.UpdateInstall, () => {
+    mainApp.ipcMain.handle(IPCEvent.UpdateInstall, event => {
+        if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         autoUpdater.quitAndInstall(true, true);
     });
     mainApp.ipcMain.on(IPCEvent.UpdateGetState, event => {
-        event.returnValue = mainApp.updateState;
-    });
-    // Config Editor
-    mainApp.ipcMain.handle(IPCEvent.MonacoEditorGetConfig, event => {
-        return mainApp.config.toString();
-    });
-    mainApp.ipcMain.handle(IPCEvent.MonacoEditorGetAutoComplete, event => {
-        return mainApp.config.monacoAutoComplete();
-    });
-    mainApp.ipcMain.handle(IPCEvent.MonacoEditorSaveConfig, (event, config) => {
-        // Validate and save the config
-        try {
-            mainApp.config.loadConfig(config);
-            mainApp.config.save();
-            mainApp.logger.info("Config saved successfully");
-            return true;
-        } catch (e) {
-            mainApp.logger.error("Invalid config:", e);
-            dialog.showErrorBox("Configuration invalide", `La configuration fournie est invalide : ${(e as Error).message}`);
-            return false;
-        }
+        event.returnValue = isTrustedClientFrame(event, mainApp) ? mainApp.updateState : null;
     });
 }
