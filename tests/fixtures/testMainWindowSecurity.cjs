@@ -11,6 +11,20 @@ const root = path.resolve(__dirname, '../..');
     app.setAppPath(root);
     app.commandLine.appendSwitch('use-fake-device-for-media-stream');
     require('../../build/AppCore/Constants.js').default.VerboseAPIServerLogging = false;
+    /*
+     * L'ecran de bienvenue demande la langue au tout premier lancement et attend la
+     * reponse avant de creer la fenetre du client. Un test ne repond pas : on note
+     * donc que la question a deja ete posee, comme apres un vrai premier lancement.
+     */
+    {
+        const { defaultSettings } = require('../../build/shared/Settings.js');
+        const reglages = { ...defaultSettings, langue_choisie: true };
+        fs.mkdirSync(profile, { recursive: true });
+        fs.writeFileSync(
+            path.join(profile, 'config.json'),
+            JSON.stringify({ version: 1, settings: reglages }, null, 4),
+        );
+    }
     const { DiscordBotClient, decidePermission } = require('../../build/AppCore/index.js');
     // Le partage d'ecran passe par "media" avec une liste de types vide : il est deja
     // mort une fois parce que ce filtre avait change sans rien dire.

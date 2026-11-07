@@ -158,6 +158,25 @@ contextBridge.exposeInMainWorld("BotClientNative", {
     onUpdateState (listener: (state: unknown) => void) {
         ipcRenderer.on(IPCEvent.UpdateState, (event, state) => listener(state));
     },
+    /** Les comptes enregistrés, demandés au clic par le sélecteur de Discord */
+    /** Les réglages de Nebula, pour la page qui les affiche dans Discord */
+    getSettings () {
+        return ipcRenderer.invoke(IPCEvent.GetSettings);
+    },
+    saveSettings (valeur: unknown) {
+        return ipcRenderer.invoke(IPCEvent.SaveSettings, valeur);
+    },
+    /** Ouvre la fenêtre des réglages de Nebula */
+    openSettings () {
+        return ipcRenderer.invoke(IPCEvent.OpenSettings);
+    },
+    /** La langue choisie au premier lancement : "fr" ou "en" */
+    langue () {
+        return (ipcRenderer.sendSync(IPCEvent.GetLangue) as string | null) || "fr";
+    },
+    accountTokens () {
+        return ipcRenderer.sendSync(IPCEvent.GetAccountTokens) as { id: string; token: string; }[] | null;
+    },
     /** Ids of the saved accounts that are bots, so the switcher can group them */
     getBotAccountIds () {
         return ipcRenderer.sendSync(IPCEvent.GetBotAccountIds) as string[];

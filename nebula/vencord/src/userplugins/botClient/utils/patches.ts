@@ -292,6 +292,42 @@ export function handleDispatchPatch(data: any, eventName: string, n: any, receiv
  */
 let userAccountSession = false;
 
+/*
+ * Au rechargement de la page, Discord ouvre la passerelle et s'identifie lui-même avant
+ * que le correctif d'identification n'ait pu tourner — c'est son « fast connect ». Le
+ * drapeau restait donc à faux, le compte utilisateur était traité comme un bot à
+ * l'arrivée du READY, et le client se déconnectait tout seul : un Ctrl+R renvoyait à
+ * l'écran de choix des comptes.
+ *
+ * Le jeton est déjà sur le disque à ce moment-là. On le lit donc tout de suite, et on
+ * demande au processus principal à qui il appartient, sans attendre l'identification.
+ * Discord supprime window.localStorage : il faut passer par une iframe pour l'atteindre.
+ */
+function jetonEnregistre (): string | null {
+    const cadre = document.createElement("iframe");
+    try {
+        document.body.append(cadre);
+        const brut = cadre.contentWindow?.localStorage?.getItem("token");
+        return brut ? JSON.parse(brut) : null;
+    } catch {
+        return null;
+    } finally {
+        cadre.remove();
+    }
+}
+
+export function reconnaitreLeCompteAuDemarrage () {
+    if (userAccountSession) return;
+    try {
+        const jeton = jetonEnregistre();
+        if (!jeton) return;
+        userAccountSession = Boolean((window as any).BotClientNative?.isUserToken?.(jeton));
+        if (userAccountSession) logger.info("Compte utilisateur reconnu avant l'identification");
+    } catch (error) {
+        logger.warn("Impossible de reconnaître le compte au démarrage", error);
+    }
+}
+
 export function isUserAccountSession() {
     return userAccountSession;
 }

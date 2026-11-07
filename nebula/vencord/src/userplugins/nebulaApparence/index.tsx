@@ -9,6 +9,7 @@ import { definePluginSettings } from "@api/Settings";
 import { Logger } from "@utils/Logger";
 import definePlugin, { OptionType } from "@utils/types";
 import { FluxDispatcher, UserStore } from "@webpack/common";
+import { t } from "../botClient/langue";
 
 const logger = new Logger("NebulaApparence", "#f5bde6");
 
@@ -23,32 +24,32 @@ const badgeIcon = (hash: string) => `https://cdn.discordapp.com/badge-icons/${ha
 const CATALOGUE = [
     { key: "nebula", label: "Creator Nebula", icon: "nebulacreator00000000000000000000" },
     { key: "staff", label: "Discord Staff", icon: "5e74e9b61934fc1f67c65515d1f7e60d" },
-    { key: "partner", label: "Partenaire", icon: "3f9748e53446a137a052f3454e2de41e" },
+    { key: "partner", label: t("Partenaire", "Partner"), icon: "3f9748e53446a137a052f3454e2de41e" },
     { key: "moderator", label: "Moderator Programs Alumni", icon: "fee1624003e2fee35cb398e125dc479b" },
     { key: "hypesquadEvents", label: "HypeSquad Events", icon: "bf01d1073931f921909045f3a39fd264" },
     { key: "bravery", label: "HypeSquad Bravery", icon: "8a88d63823d8a71cd5e390baa45efa02" },
     { key: "brilliance", label: "HypeSquad Brilliance", icon: "011940fd013da3f7fb926e4a1cd2e618" },
     { key: "balance", label: "HypeSquad Balance", icon: "3aa41de486fa12454c3761e8e223442e" },
     { key: "bugHunter", label: "Bug Hunter", icon: "2717692c7dca7289b35297368a940dd0" },
-    { key: "bugHunterGold", label: "Bug Hunter (or)", icon: "848f79194d4be5ff5f81505cbd0ce1e6" },
-    { key: "activeDeveloper", label: "Développeur actif", icon: "6bdc42827a38498929a4920da12695d9" },
-    { key: "verifiedDeveloper", label: "Développeur de bot vérifié", icon: "6df5892e0f35b051f8b61eace34f4967" },
-    { key: "earlySupporter", label: "Soutien de la première heure", icon: "7060786766c9c840eb3019e725d2b358" },
-    { key: "nitro", label: "Abonné Nitro", icon: "2ba85e8026a8614b640c2837bcdfe21b" },
-    { key: "booster", label: "Booster de serveur", icon: "ec92202290b48d0879b7413d2dde3bab" },
-    { key: "quest", label: "Quête accomplie", icon: "7d9ae358c8c5e118768335dbe68b4fb8" },
+    { key: "bugHunterGold", label: t("Bug Hunter (or)", "Bug Hunter (gold)"), icon: "848f79194d4be5ff5f81505cbd0ce1e6" },
+    { key: "activeDeveloper", label: t("Développeur actif", "Active Developer"), icon: "6bdc42827a38498929a4920da12695d9" },
+    { key: "verifiedDeveloper", label: t("Développeur de bot vérifié", "Early Verified Bot Developer"), icon: "6df5892e0f35b051f8b61eace34f4967" },
+    { key: "earlySupporter", label: t("Soutien de la première heure", "Early Supporter"), icon: "7060786766c9c840eb3019e725d2b358" },
+    { key: "nitro", label: t("Abonné Nitro", "Nitro subscriber"), icon: "2ba85e8026a8614b640c2837bcdfe21b" },
+    { key: "booster", label: t("Booster de serveur", "Server Booster"), icon: "ec92202290b48d0879b7413d2dde3bab" },
+    { key: "quest", label: t("Quête accomplie", "Quest completed"), icon: "7d9ae358c8c5e118768335dbe68b4fb8" },
 ] as const;
 
 const settings = definePluginSettings({
     displayName: {
         type: OptionType.STRING,
-        description: "Nom affiché, la ligne du haut. Laisse vide pour garder le vrai.",
+        description: t("Nom affiché, la ligne du haut. Laisse vide pour garder le vrai.", "Display name, the top line. Leave empty to keep the real one."),
         default: "",
         onChange: () => applyNames(),
     },
     username: {
         type: OptionType.STRING,
-        description: "Pseudo, la ligne du bas. Laisse vide pour garder le vrai.",
+        description: t("Pseudo, la ligne du bas. Laisse vide pour garder le vrai.", "Username, the bottom line. Leave empty to keep the real one."),
         default: "",
         onChange: () => applyNames(),
     },
@@ -117,8 +118,10 @@ function applyNames() {
 
 export default definePlugin({
     name: "NebulaApparence",
-    description:
+    description: t(
         "Change ton nom affiché, ton pseudo et les badges de ton profil. Purement visuel : rien n'est envoyé à Discord et personne d'autre ne le voit.",
+        "Change your display name, your username and your profile badges. Purely cosmetic: nothing is sent to Discord and nobody else sees it.",
+    ),
     authors: [
         {
             name: "Nebula",

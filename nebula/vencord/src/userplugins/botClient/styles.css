@@ -24,7 +24,7 @@ div:has(> a[href$="/channels/@me/1000000000000000000"]) > [class*="closeButton"]
 /* Headings separating user accounts from bots in the account switcher */
 .nebula-account-group {
     margin: 12px 0 4px;
-    color: var(--header-secondary, var(--text-muted, #b5bac1));
+    color: var(--text-muted, #b5bac1);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -47,7 +47,7 @@ div:has(> a[href$="/channels/@me/1000000000000000000"]) > [class*="closeButton"]
     align-items: center;
     justify-content: center;
     padding: 40px;
-    background: var(--background-primary, #313338);
+    background: var(--background-base-lowest, #121214);
     text-align: center;
 }
 
@@ -59,7 +59,7 @@ div:has(> a[href$="/channels/@me/1000000000000000000"]) > [class*="closeButton"]
 
 .nebula-blocked-title {
     margin: 0;
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    color: var(--text-strong, #f2f3f5);
     font-size: 24px;
     font-weight: 700;
 }
@@ -133,7 +133,7 @@ div:has(> a[href$="/channels/@me/1000000000000000000"]) > [class*="closeButton"]
     align-items: center;
     justify-content: center;
     padding: 48px 40px;
-    background: var(--background-primary, #313338);
+    background: var(--background-base-lowest, #121214);
     text-align: center;
 }
 
@@ -144,4 +144,76 @@ div:has(> a[href$="/channels/@me/1000000000000000000"]) > [class*="closeButton"]
  */
 [class*="panels_"] [class*="redGlow"]:not(:hover) {
     background-color: transparent !important;
+}
+
+/*
+ * La mise à jour, visible où qu'on soit dans le client. Elle se posait auparavant dans
+ * le seul onglet Nebula, donc on ne savait pas quand le téléchargement finissait.
+ */
+.nebula-update {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 4000;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 280px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-subtle, rgb(255 255 255 / 8%));
+    border-radius: 10px;
+    background: var(--background-base-low, #202024);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+    color: var(--text-default, #dbdee1);
+    font-size: 13px;
+}
+
+.nebula-update-title {
+    color: var(--text-strong, #f2f3f5);
+    font-weight: 600;
+}
+
+.nebula-update-track {
+    overflow: hidden;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border-subtle, rgb(255 255 255 / 8%));
+}
+
+.nebula-update-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--brand-500, #5865f2);
+    transition: width 0.2s ease-out;
+}
+
+.nebula-update-note {
+    color: var(--text-muted, #b5bac1);
+    font-size: 12px;
+}
+
+.nebula-update[data-etat="ready"] .nebula-update-title {
+    color: var(--status-positive, #23a55a);
+}
+
+.nebula-update[data-etat="error"] .nebula-update-title {
+    color: var(--text-feedback-critical, #f23f43);
+}
+
+.nebula-update-action {
+    margin-top: 4px;
+    padding: 7px 12px;
+    border: none;
+    border-radius: 7px;
+    background: var(--brand-500, #5865f2);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.nebula-update-action:hover {
+    filter: brightness(1.1);
 }

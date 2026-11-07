@@ -53,8 +53,9 @@ import AuthBoxMultiTokenLogin, { multiTokenState } from "./components/AuthBoxMul
 import AuthBoxTokenLogin from "./components/AuthBoxTokenLogin";
 import { blockUnavailableModals } from "./components/BlockedModals";
 import EmbedEditorModal from "./components/EmbedEditor";
-import { listenForScreenShare } from "./components/ScreenSharePicker";
-import NebulaTab, { BotBillingTab, ChangelogTab, NebulaIcon, ReadmeTab } from "./components/NebulaTab";
+import { listenForScreenShare, prevenirDiscord, qualiteRetenue } from "./components/ScreenSharePicker";
+import NebulaTab, { BotBillingTab, ChangelogTab, NebulaIcon, ReadmeTab, SettingsTab } from "./components/NebulaTab";
+import { installEarlyFixes } from "./components/EarlyFixes";
 // Components
 import { IconEmbedSvg } from "./icon.svg";
 import type { EmojiGuildData, Group, List, MemberPatch, OpItem, Ops } from "./typing/index.d.ts";
@@ -68,6 +69,14 @@ import { doIdentifyFirstPatch, handleClosePatch, handleDispatchPatch, isUserAcco
 import { settingsProtoHelpers, settingsProtoPatch } from "./utils/settings-proto";
 import { SnowflakeUtil } from "./utils/SnowflakeUtil";
 import { PendingReplyStore, uploadFile } from "./utils/voiceMessagePlugin";
+import { enAnglais, t } from "./langue";
+
+/*
+ * Posé au chargement, pas au démarrage du plugin : l'écran de choix des comptes
+ * s'affiche avant que le plugin ne démarre, et c'est là que Discord propose une clé
+ * d'accès et qu'une mise à jour peut se télécharger.
+ */
+installEarlyFixes();
 
 /** The local channel served by the app itself, which is always present and cannot be closed */
 const SystemChannelId = "1000000000000000000";
@@ -87,6 +96,7 @@ let buildLayoutOriginal: ((builder: any) => any) | null = null;
 const AboutPage = ErrorBoundary.wrap(NebulaTab, { displayName: "NebulaTab" });
 const DocPage = ErrorBoundary.wrap(ReadmeTab, { displayName: "NebulaReadme" });
 const ChangesPage = ErrorBoundary.wrap(ChangelogTab, { displayName: "NebulaChangelog" });
+const SettingsPage = ErrorBoundary.wrap(SettingsTab, { displayName: "NebulaSettings" });
 const UnavailablePage = ErrorBoundary.wrap(BotBillingTab, { displayName: "NebulaUnavailable" });
 
 const GetToken = findByPropsLazy("getToken", "setToken");
@@ -564,7 +574,10 @@ const settings = definePluginSettings({
 
 export default definePlugin({
     name: "Nebula",
-    description: "Permet d'utiliser des comptes Discord et des bots dans ce client",
+    description: t(
+        "Permet d'utiliser des comptes Discord et des bots dans ce client",
+        "Lets you use Discord accounts and bots in this client",
+    ),
     authors: [
         {
             name: "Nebula",
@@ -1049,6 +1062,41 @@ export default definePlugin({
                 },
             ],
         },
+        /*
+         * Le sélecteur de comptes de Discord cherche le jeton dans *son* magasin à lui.
+         * Nebula garde les siens ailleurs : Discord n'en trouve aucun, affiche « Essaie
+         * de te reconnecter » sous chaque compte et renvoie vers l'écran d'ajout de
+         * compte quand on clique. On détourne donc le changement de compte vers le
+         * processus principal, qui injecte le jeton enregistré et recharge la fenêtre —
+         * un rechargement complet, le seul moyen que la session reparte propre (sans
+         * ça, le statut et les messages du compte précédent traînent).
+         */
+        /*
+         * Le sélecteur de comptes, lui, ne passe même pas par le changement de compte
+         * quand Discord n'a pas de jeton : il renvoie droit au formulaire de connexion.
+         * C'est la branche qu'on détourne — celle du bouton « Connexion » sous un compte
+         * marqué « Essaie de te reconnecter ».
+         */
+        {
+            find: "MULTI_ACCOUNTS_LIST",
+            replacement: [
+                {
+                    // k?i(0,a.id):(track(...),Mx(a.id,...),i(1,a.id))
+                    match: /(\i)\?(\i)\(0,(\i)\.id\):\(/,
+                    replace: "$self.changerDeCompte($3.id)?void 0:$1?$2(0,$3.id):(",
+                    noWarn: true,
+                },
+            ],
+        },
+        {
+            find: "Switching accounts failed because there was no token",
+            replacement: [
+                {
+                    match: /let (\i)=(\i)\.getToken\((\i)\);/,
+                    replace: "if($self.changerDeCompte($3))return Promise.resolve();let $1=$2.getToken($3);",
+                },
+            ],
+        },
         {
             find: "STARTED_ONBOARDING=8",
             replacement: [
@@ -1058,25 +1106,14 @@ export default definePlugin({
                 },
             ],
         },
-        // Max attachment size 20MB = 20971520
-        // 2024: https://discord.com/developers/docs/change-log#default-file-upload-limit-change
-        // 2026: https://docs.discord.com/developers/change-log#default-file-upload-limit-increase
-        {
-            find: 'PREMIUM_TENURE_1_MONTH="premium_tenure_1_month_v2"',
-            replacement: [
-                {
-                    match: /(\d):{fileSize:\w+}/g,
-                    replace: "$1:{fileSize:20971520}",
-                },
-            ],
-        },
         /*
-         * Le correctif ci-dessus ne touche que les paliers Nitro. Un compte sans Nitro,
-         * et donc tout bot, reste sur la valeur par défaut du client : 10 Mio, alors que
-         * Discord est passé à 20 Mio le 3 septembre 2026. Résultat, un fichier de 12 Mo
-         * était refusé sans raison. Le plancher est remonté ici, sur la fonction que le
-         * client interroge. Les serveurs boostés gardent leur limite plus haute : elle
-         * est calculée ailleurs, à partir des fonctionnalités du serveur.
+         * Discord est passé à 20 Mio par défaut le 3 septembre 2026, mais le client garde
+         * 10 Mio pour un compte sans Nitro — donc pour tout bot. Le plancher est remonté
+         * ici, sur la fonction que le client interroge.
+         *
+         * Le correctif d'origine rabotait à 20 Mio la table des paliers Nitro : un compte
+         * avec le vrai Nitro s'y retrouvait limité lui aussi, alors qu'il a droit à bien
+         * plus. On ne touche plus à cette table, et on se contente d'un plancher.
          */
         {
             find: 'location:"getUserMaxFileSize"',
@@ -1087,12 +1124,29 @@ export default definePlugin({
                 },
             ],
         },
-        // Deny stickers to be sent everywhere - From FakeNitro plugin
+        /*
+         * Discord réserve le partage en 1080p et 1440p au Nitro complet : avec Nitro
+         * Basic il plafonne à 720p à 30 images/s, et c'est lui qui refuse, pas Nebula.
+         * Le client demande désormais quand même la qualité choisie. Les serveurs de
+         * Discord restent libres de la rabaisser, mais l'encodeur local, lui, suit.
+         */
+        {
+            find: "canStreamQuality:function(",
+            replacement: {
+                match: /canStreamQuality:function\((\i),(\i)\)\{return/,
+                replace: "canStreamQuality:function($1,$2){if($self.isUserAccountSession())return true;return",
+            },
+        },
+        /*
+         * Un bot ne peut pas envoyer d'autocollants personnalisés, d'où ce refus. Mais il
+         * s'appliquait à tout le monde : un compte avec le vrai Nitro se voyait répondre
+         * « Passe à Discord Nitro » alors qu'il l'avait déjà. Discord décide pour lui.
+         */
         {
             find: "canUseCustomStickersEverywhere:",
             replacement: {
                 match: /(?<=canUseCustomStickersEverywhere:function\(\i\)\{)/,
-                replace: "return false;",
+                replace: "if(!$self.isUserAccountSession())return false;",
             },
         },
         // Try handle Private Channel
@@ -1125,12 +1179,14 @@ export default definePlugin({
                 },
             ],
         },
-        // Fix 2000 character limit for messages
+        /*
+         * Même histoire : un bot n'a pas droit aux messages longs, un compte avec Nitro si.
+         */
         {
             find: ",canUseIncreasedMessageLength:function(",
             replacement: {
-                match: /,canUseIncreasedMessageLength:function\(\w+\)\{return/,
-                replace: ",canUseIncreasedMessageLength:function(){return false;return",
+                match: /,canUseIncreasedMessageLength:function\((\w+)\)\{return/,
+                replace: ",canUseIncreasedMessageLength:function($1){if(!$self.isUserAccountSession())return false;return",
             },
         },
         ...applicationEmojiPatches,
@@ -1591,11 +1647,16 @@ export default definePlugin({
          * A bot joins a server through the OAuth invite link, never from the client:
          * creating or joining one from here always fails, so say why up front.
          */
-        const unavailableForBots = (what: string) => {
-            nebulaAlert("Rien à voir par ici", [
-                `Tu es connecté avec un bot, et un bot ne peut pas ${what} depuis un client.`,
-                "Un bot rejoint un serveur uniquement via son lien d'invitation OAuth, généré depuis le " +
-                    "portail développeur de Discord, et c'est le propriétaire du serveur qui l'ajoute.",
+        const unavailableForBots = (fr: string, en: string) => {
+            nebulaAlert(t("Rien à voir par ici", "Nothing to see here"), [
+                t(
+                    `Tu es connecté avec un bot, et un bot ne peut pas ${fr} depuis un client.`,
+                    `You are signed in with a bot, and a bot cannot ${en} from a client.`,
+                ),
+                t(
+                    "Un bot rejoint un serveur uniquement via son lien d'invitation OAuth, généré depuis le portail développeur de Discord, et c'est le propriétaire du serveur qui l'ajoute.",
+                    "A bot only joins a server through its OAuth invite link, generated from the Discord developer portal, and the server owner is the one who adds it.",
+                ),
             ]);
         };
 
@@ -1625,14 +1686,14 @@ export default definePlugin({
          * may be frozen, or simply gone after a Discord update, and everything below
          * (the current user, the private channels…) still has to be installed.
          */
-        const guard = (propName: string, what: string, rejects: boolean) => {
+        const guard = (propName: string, fr: string, en: string, rejects: boolean) => {
             try {
                 const owner = findByProps(propName);
                 if (typeof owner?.[propName] !== "function") return;
                 const original = owner[propName].bind(owner);
                 owner[propName] = function (...args: any[]) {
                     if (isUserAccountSession()) return original(...args);
-                    unavailableForBots(what);
+                    unavailableForBots(fr, en);
                     return rejects
                         ? Promise.reject(new Error(`Nebula: indisponible pour un bot (${propName})`))
                         : undefined;
@@ -1644,10 +1705,10 @@ export default definePlugin({
 
 
         // The modal opener, so the window never appears at all
-        guard("openCreateGuildModal", "créer un serveur", false);
+        guard("openCreateGuildModal", "créer un serveur", "create a server", false);
         // …and the actions themselves, as a safety net
-        guard("createGuild", "créer un serveur", true);
-        guard("joinGuild", "rejoindre un serveur", true);
+        guard("createGuild", "créer un serveur", "create a server", true);
+        guard("joinGuild", "rejoindre un serveur", "join a server", true);
 
         // The local system channel cannot be closed
         try {
@@ -1656,7 +1717,7 @@ export default definePlugin({
                 const closeOriginal = PrivateChannelActions.closePrivateChannel.bind(PrivateChannelActions);
                 PrivateChannelActions.closePrivateChannel = function (channelId: string, ...rest: any[]) {
                     if (channelId === SystemChannelId) {
-                        showToast({ text: "Ce salon ne peut pas être fermé", variant: "critical" });
+                        showToast({ text: t("Ce salon ne peut pas être fermé", "This channel cannot be closed"), variant: "critical" });
                         return;
                     }
                     return closeOriginal(channelId, ...rest);
@@ -1775,9 +1836,12 @@ export default definePlugin({
     guardInviteButton(alert: (title: string, paragraphs: string[]) => void) {
         try {
             window.BotClientNative.onSupportInviteCopied((invite: string) => {
-                alert("Lien copié", [
-                    "Le lien du serveur est dans ton presse-papiers.",
-                    `Colle-le dans Discord pour rejoindre le serveur : ${invite}`,
+                alert(t("Lien copié", "Link copied"), [
+                    t("Le lien du serveur est dans ton presse-papiers.", "The server link is in your clipboard."),
+                    t(
+                        `Colle-le dans Discord pour rejoindre le serveur : ${invite}`,
+                        `Paste it into Discord to join the server: ${invite}`,
+                    ),
                 ]);
             });
         } catch (error) {
@@ -1790,19 +1854,23 @@ export default definePlugin({
                 // Nitro is sold through machinery neither kind of account has here
                 match: /^\/store/,
                 botsOnly: false,
-                paragraphs: [
-                    "Cette page vend Nitro. Elle a besoin des rouages de paiement et d'abonnement de " +
-                        "Discord, qui n'existent que dans le client officiel.",
-                    "Passe par Discord pour souscrire ou gérer un abonnement.",
+                paragraphs: () => [
+                    t(
+                        "Cette page vend Nitro. Elle a besoin des rouages de paiement et d'abonnement de Discord, qui n'existent que dans le client officiel.",
+                        "This page sells Nitro. It needs the payment and subscription machinery of Discord, which only exists in the official client.",
+                    ),
+                    t("Passe par Discord pour souscrire ou gérer un abonnement.", "Use Discord itself to take out or manage a subscription."),
                 ],
             },
             {
                 match: /^\/(shop|application-directory)/,
                 botsOnly: true,
-                paragraphs: [
-                    "Tu es connecté avec un bot, et la boutique vend des objets pour un compte Discord : " +
-                        "décorations de profil, effets, thèmes. Un bot n'a rien de tout ça.",
-                    "Connecte-toi avec un compte Discord pour y accéder.",
+                paragraphs: () => [
+                    t(
+                        "Tu es connecté avec un bot, et la boutique vend des objets pour un compte Discord : décorations de profil, effets, thèmes. Un bot n'a rien de tout ça.",
+                        "You are signed in with a bot, and the shop sells things for a Discord account: profile decorations, effects, themes. A bot has none of that.",
+                    ),
+                    t("Connecte-toi avec un compte Discord pour y accéder.", "Sign in with a Discord account to reach it."),
                 ],
             },
             {
@@ -1813,20 +1881,26 @@ export default definePlugin({
                  */
                 match: /^\/(quest|quests|quest-home)/,
                 botsOnly: false,
-                paragraphs: [
-                    "Les quêtes ne peuvent pas avancer ici. Elles sont validées par le client officiel de " +
-                        "Discord, qui vérifie lui-même le jeu lancé ou la vidéo regardée.",
-                    "Ouvre Discord pour réclamer une récompense.",
+                paragraphs: () => [
+                    t(
+                        "Les quêtes ne peuvent pas avancer ici. Elles sont validées par le client officiel de Discord, qui vérifie lui-même le jeu lancé ou la vidéo regardée.",
+                        "Quests cannot make progress here. They are validated by the official Discord client, which watches the running game or the video itself.",
+                    ),
+                    t("Ouvre Discord pour réclamer une récompense.", "Open Discord to claim a reward."),
                 ],
             },
             {
                 match: /^\/(discovery|guild-discovery)/,
                 botsOnly: true,
-                paragraphs: [
-                    "Tu es connecté avec un bot, et la découverte sert à rejoindre un serveur : un bot ne " +
-                        "peut pas le faire depuis un client.",
-                    "Un bot rejoint un serveur uniquement par son lien d'invitation OAuth, et c'est le " +
-                        "propriétaire du serveur qui l'ajoute.",
+                paragraphs: () => [
+                    t(
+                        "Tu es connecté avec un bot, et la découverte sert à rejoindre un serveur : un bot ne peut pas le faire depuis un client.",
+                        "You are signed in with a bot, and discovery is for joining a server: a bot cannot do that from a client.",
+                    ),
+                    t(
+                        "Un bot rejoint un serveur uniquement par son lien d'invitation OAuth, et c'est le propriétaire du serveur qui l'ajoute.",
+                        "A bot only joins a server through its OAuth invite link, and the server owner is the one who adds it.",
+                    ),
                 ],
             },
         ];
@@ -1847,7 +1921,7 @@ export default definePlugin({
             node.className = "nebula-blocked-page";
             node.innerHTML =
                 '<img class="nebula-blocked-art" alt="" src="https://cdn.discordapp.com/emojis/1399479404706660373.gif">' +
-                '<h2 class="nebula-blocked-title">Rien à voir par ici</h2>' +
+                `<h2 class="nebula-blocked-title">${t("Rien à voir par ici", "Nothing to see here")}</h2>` +
                 '<div class="nebula-blocked-body"></div>';
             document.body.appendChild(node);
             return node;
@@ -1898,7 +1972,7 @@ export default definePlugin({
             try {
                 const entry = findBlocked(window.location.pathname);
                 if (entry) {
-                    show(entry.paragraphs);
+                    show(entry.paragraphs());
                 } else {
                     hide();
                 }
@@ -1940,7 +2014,7 @@ export default definePlugin({
         // With only one kind of account, headings would say nothing
         if (!people.length || !bots.length) return items;
         return [
-            React.createElement(Menu.MenuGroup, { key: "nebula-users", label: "UTILISATEURS" }, people),
+            React.createElement(Menu.MenuGroup, { key: "nebula-users", label: t("UTILISATEURS", "USERS") }, people),
             React.createElement(Menu.MenuGroup, { key: "nebula-bots", label: "BOTS" }, bots),
         ];
     },
@@ -2001,6 +2075,8 @@ export default definePlugin({
         );
 
         this.applyGlobalPatches();
+        this.imposerQualitePartage();
+        this.imposerLangue();
         void this.getApplicationEmojis();
     },
     stop() {
@@ -2133,6 +2209,15 @@ export default definePlugin({
         if (!native?.onRunningGamesChanged) return;
 
         const publish = (games: any[], added: any[], removed: any[]) => {
+            /*
+             * La détection de jeux dit ce qui tourne sur la machine. Sur un bot, ce n'est
+             * pas son activité à lui mais celle de la personne devant l'écran : elle n'a
+             * rien à faire sur le profil du bot, surtout après un changement de compte.
+             */
+            if (!isUserAccountSession()) {
+                BotClientLogger.info("Session bot : la détection de jeux ne publie rien");
+                return;
+            }
             BotClientLogger.info(
                 `Jeux reçus du processus principal: [${games.map(g => g?.name).join(", ")}]` +
                     ` ajoutés=${added.length} retirés=${removed.length}`,
@@ -2222,22 +2307,29 @@ export default definePlugin({
                 buildLayout: () => [
                     SettingsPlugin.buildEntry({
                         key: "nebula_main",
-                        title: "À propos",
+                        title: t("À propos", "About"),
                         panelTitle: "Nebula",
                         Component: AboutPage,
                         Icon: NebulaIcon
                     }),
                     SettingsPlugin.buildEntry({
                         key: "nebula_readme",
-                        title: "Documentation",
-                        panelTitle: "Documentation",
+                        title: t("Documentation", "Documentation"),
+                        panelTitle: t("Documentation", "Documentation"),
                         Component: DocPage,
                         Icon: NebulaIcon
                     }),
                     SettingsPlugin.buildEntry({
+                        key: "nebula_settings",
+                        title: t("Réglages", "Settings"),
+                        panelTitle: t("Réglages de Nebula", "Nebula settings"),
+                        Component: SettingsPage,
+                        Icon: NebulaIcon
+                    }),
+                    SettingsPlugin.buildEntry({
                         key: "nebula_changelog",
-                        title: "Nouveautés",
-                        panelTitle: "Nouveautés",
+                        title: t("Nouveautés", "What's new"),
+                        panelTitle: t("Nouveautés", "What's new"),
                         Component: ChangesPage,
                         Icon: NebulaIcon
                     })
@@ -2278,8 +2370,8 @@ export default definePlugin({
             const blockedEntry = (key: string) =>
                 SettingsPlugin.buildEntry({
                     key: `nebula_blocked_${key}`,
-                    title: "Indisponible",
-                    panelTitle: "Indisponible",
+                    title: t("Indisponible", "Unavailable"),
+                    panelTitle: t("Indisponible", "Unavailable"),
                     Component: UnavailablePage,
                     Icon: NebulaIcon
                 });
@@ -2503,13 +2595,106 @@ export default definePlugin({
     openPrivateChannelPatch,
     isUserAccountSession,
     /*
+     * Discord applique la langue du compte une fois connecté, par-dessus celle de
+     * Nebula : on choisissait « Français » à l'accueil et le client s'affichait en
+     * anglais. La fonction qui change de langue est enveloppée, pour qu'elle revienne
+     * toujours sur le choix fait dans Nebula.
+     */
+    imposerLangue() {
+        try {
+            const intl = findByProps("setLocale", "currentLocale") as any;
+            if (!intl?.setLocale || intl.__nebulaLangue) return;
+
+            const voulue = enAnglais() ? "en-US" : "fr";
+            const original = intl.setLocale.bind(intl);
+            intl.setLocale = () => original(voulue);
+            intl.__nebulaLangue = true;
+            if (intl.currentLocale !== voulue) original(voulue);
+            BotClientLogger.info(`Nebula impose la langue « ${voulue} » au client`);
+        } catch (error) {
+            BotClientLogger.warn("Impossible d'imposer la langue du client", error);
+        }
+    },
+
+    /*
+     * Le module qui démarre le partage est défini avant que Vencord n'attache ses
+     * correctifs : un patch webpack ne l'atteint pas. On enveloppe donc la fonction
+     * elle-même, une fois le client chargé.
+     */
+    imposerQualitePartage() {
+        try {
+            const moteur = findByProps("setGoLiveSource") as any;
+            if (!moteur?.setGoLiveSource || moteur.__nebulaQualite) return;
+            const original = moteur.setGoLiveSource.bind(moteur);
+            moteur.setGoLiveSource = (source: any) => original(this.qualitePartage(source));
+            moteur.__nebulaQualite = true;
+            /*
+             * Le magasin de Discord démarre sur 720p à 30 images/s. Lui redonner tout de
+             * suite le dernier choix évite qu'un partage lancé sans rouvrir le sélecteur
+             * reparte sur ces valeurs-là.
+             */
+            prevenirDiscord(qualiteRetenue());
+            BotClientLogger.info("Qualité du partage : Nebula impose son choix à Discord");
+        } catch (error) {
+            BotClientLogger.warn("Impossible d'imposer la qualité du partage", error);
+        }
+    },
+
+    /** Reporte la qualité choisie dans le sélecteur sur ce que Discord va diffuser */
+    qualitePartage(source: any) {
+        try {
+            if (!source?.qualityOptions) return source;
+            const choix = qualiteRetenue();
+            const resolution = choix.hauteur > 0 ? choix.hauteur : source.qualityOptions.resolution;
+            BotClientLogger.info(`Nebula impose ${resolution}p à ${choix.fps} images/s au partage`);
+            return {
+                ...source,
+                qualityOptions: {
+                    ...source.qualityOptions,
+                    // 3 = PRESET_CUSTOM : sans lui, Discord choisit lui-même et ignore les valeurs
+                    preset: 3,
+                    resolution,
+                    frameRate: choix.fps,
+                },
+            };
+        } catch (error) {
+            BotClientLogger.warn("Impossible d'imposer la qualité du partage", error);
+            return source;
+        }
+    },
+
+    /**
+     * Vrai si Nebula prend le changement de compte en charge elle-même.
+     *
+     * Le jeton est demandé au processus principal de façon synchrone : le sélecteur de
+     * Discord appelle au moment du clic, une réponse différée arriverait après qu'il a
+     * déjà conclu à l'absence de jeton. L'écran de choix des comptes s'affiche aussi
+     * avant que le plugin ne démarre : il ne peut donc rien y avoir en cache.
+     */
+    changerDeCompte(userId: string) {
+        try {
+            const comptes = (window as any).BotClientNative?.accountTokens?.();
+            const compte = Array.isArray(comptes) && comptes.find((c: any) => String(c?.id) === String(userId));
+            if (!compte?.token) return false;
+            BotClientLogger.info(`Reconnexion au compte ${userId} avec le jeton enregistré`);
+            (window as any).BotClientNative?.accountUse?.(compte.token);
+            return true;
+        } catch (error) {
+            BotClientLogger.error("Reconnexion impossible", error);
+            return false;
+        }
+    },
+    /*
      * « Go Live » n'existe pas pour un bot : la passerelle des bots ne porte pas les
      * opérations de partage, et les envoyer quand même ferait fermer la connexion. Le
      * bouton reste donc sans effet — autant le dire, plutôt que de ne rien faire.
      */
     botCannotStream() {
         showToast({
-            text: "Un bot ne peut pas partager son écran : Discord réserve « Go Live » aux comptes utilisateurs. Connecte-toi avec un compte pour partager.",
+            text: t(
+                "Un bot ne peut pas partager son écran : Discord réserve « Go Live » aux comptes utilisateurs. Connecte-toi avec un compte pour partager.",
+                "A bot cannot share its screen: Discord keeps Go Live for user accounts. Sign in with an account to share.",
+            ),
             variant: "critical",
         });
     },

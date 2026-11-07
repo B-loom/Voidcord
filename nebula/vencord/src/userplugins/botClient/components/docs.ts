@@ -147,6 +147,130 @@ Nebula en est une modification personnelle, écrite avec Claude.
 
 export const CHANGELOG = `# Nouveautés
 
+## v1.2.9 — Les comptes, le partage et les couleurs
+
+### Recharger ne déconnecte plus
+- **Ctrl+R renvoyait à l'écran de choix des comptes.** Au rechargement, Discord ouvre la
+  passerelle et s'identifie lui-même avant que Nebula n'ait pu intervenir. Le compte
+  utilisateur était alors pris pour un bot à l'arrivée du READY, et le client se
+  déconnectait tout seul. Nebula reconnaît désormais le compte dès le chargement de la
+  page, sans attendre l'identification.
+
+### La langue dit ce qu'elle fait
+- **Changer la langue semblait sans effet** : les textes de Nebula sont lus une fois, au
+  chargement, et les écrans déjà affichés gardaient l'ancienne. Le choix était bien
+  enregistré ; il manquait de le dire. Un bandeau l'annonce maintenant et propose de
+  recharger — ce qui ne déconnecte plus. Les réglages qui touchent au réseau (DNS, proxy,
+  cache) préviennent, eux, qu'ils attendront le prochain lancement.
+
+### Les réglages, dans la page
+- **La documentation et les nouveautés existent en anglais.** Choisir l'anglais dans les
+  réglages ne changeait que les boutons et les étiquettes ; ces deux pages restaient en
+  français, et ce sont les plus longues. Elles sont traduites, et suivent la langue.
+
+- **Les réglages de Nebula s'affichent et se modifient dans l'onglet Nebula**, sous
+  « Réglages » : la langue, le style de l'écran de démarrage, la recherche automatique
+  des mises à jour, le DNS chiffré, le proxy du système. La fenêtre à part existe
+  toujours, mais il n'y a plus à y passer. Chaque changement est écrit aussitôt.
+
+### Ce que Nebula bridait sans le savoir
+- **Les favoris et l'ordre des serveurs revenaient vides**, même après la correction de la
+  route : le plugin remplaçait l'appel réseau de Discord par une lecture de sa base
+  locale, celle qui ne sert qu'aux bots. La route corrigée n'était donc jamais atteinte.
+  Un compte utilisateur repart maintenant sur le réseau.
+- **Les autocollants personnalisés étaient refusés à tout le monde.** Le refus venait d'un
+  « return false » écrit en dur, légitime pour un bot, appliqué aussi aux comptes. Même
+  chose pour les messages longs et pour la qualité du partage d'écran : Discord décide
+  désormais lui-même, compte par compte.
+
+### À savoir sur Nitro
+Discord compte trois abonnements, et **Nitro Basic n'ouvre pas les mêmes portes que le
+Nitro complet** : il réserve les autocollants personnalisés à leur serveur d'origine et
+arrête l'envoi à 50 Mo au lieu de 500. Nebula ne travestit plus l'abonnement d'un compte
+utilisateur : ce que le client annonce est désormais le vôtre. Ces plafonds-là sont levés
+côté client — les serveurs de Discord restent libres de refuser.
+
+### Ton compte n'était plus tout à fait le tien
+- **Le vrai Nitro était rabaissé.** Nebula annonçait « Nitro Classic » pour *tous* les
+  comptes, le tien compris : Discord refusait donc les autocollants à quelqu'un qui a
+  pourtant le Nitro complet. Cette invention sert à un bot, qui n'a ni abonnement ni
+  téléphone ; un compte utilisateur garde désormais les siens.
+- **Les achats annoncés comme possédés** venaient du même endroit : la boutique croyait
+  que tu avais déjà des décorations que tu n'avais pas.
+- **Tes favoris de GIF, d'autocollants et d'émojis revenaient vides**, et **l'ordre de tes
+  serveurs était perdu au premier lancement.** Même cause : ces deux choses vivent dans
+  tes réglages Discord, et Nebula répondait à leur place depuis sa base locale — celle
+  qu'elle tient pour les bots, qui n'ont pas de réglages chez Discord. Un compte
+  utilisateur est maintenant renvoyé vers Discord.
+
+### Langue
+- **Choisir « Français » à l'accueil donnait un client en anglais.** Discord appliquait la
+  langue du compte par-dessus celle de Nebula, une fois connecté. Nebula impose
+  désormais la sienne.
+- **Un bouton « Réglages de Nebula »** dans l'onglet Nebula ouvre la fenêtre des réglages
+  — langue, écran de démarrage, mises à jour automatiques, DNS. Elle n'était atteignable
+  que par l'icône de la zone de notification.
+
+### Profils
+- **Un jeu que tu ne connais pas s'affichait sur ton profil.** Le catalogue de Discord
+  associe les jeux à des noms d'exécutables, et plusieurs jeux revendiquent les mêmes —
+  « game.exe », « launcher.exe ». Nebula gardait le premier venu, donc un jeu au hasard.
+  Les noms partagés sont écartés : mieux vaut ne rien dire que dire n'importe quoi.
+- **Le bot connecté porte tous les badges**, comme le compte système.
+- **Le compte système est né avec Nebula.** Son profil annonçait le 13 mai 2015, date de
+  création de Discord, parce qu'il empruntait un identifiant de cette époque. Il affiche
+  désormais le 29 octobre 2026, jour de la première version publiée.
+
+### La boutique et les fenêtres bloquées
+- **La fenêtre « Ajouter un mode de paiement »** tournait dans le vide indéfiniment. Elle
+  affiche maintenant l'explication habituelle, comme les autres pages qui ont besoin des
+  rouages de paiement de Discord.
+
+### Se reconnecter à un compte
+- **Le bouton « Connexion » du sélecteur de comptes reconnecte vraiment.** Il renvoyait
+  jusqu'ici vers l'écran « Ajouter un compte », puis vers le formulaire de Discord :
+  Discord cherche le jeton dans *son* magasin à lui, qui ne contient pas ceux de Nebula,
+  conclut qu'il n'y en a pas et affiche « Essaie de te reconnecter ». Nebula prend désormais
+  la main sur ce clic et se connecte avec le jeton enregistré, comme si on l'avait collé
+  à la main.
+- **Plus de fenêtre « Sécurité Windows »** qui demandait une clé d'accès. Elle venait du
+  formulaire de connexion de Discord et ne menait nulle part, le serveur local refusant
+  déjà WebAuthn. La demande est bloquée avant d'ouvrir quoi que ce soit.
+- **Ctrl + R ne déconnecte plus.** Une session ouverte correctement survit au rechargement.
+
+### Comptes et profils
+- **Un bot n'affiche plus le jeu de ta machine.** La détection de jeux montre ce qui tourne
+  sur l'ordinateur : sur un bot, ce n'est pas son activité mais la tienne, et elle n'a rien
+  à faire sur son profil.
+- Le cache de réglages de Discord est vidé en changeant de compte : il n'est pas rangé par
+  compte, et le suivant héritait des réglages du précédent.
+
+### Interface
+- **Les couleurs sont justes à nouveau.** Discord a retiré neuf variables de couleur
+  (\`--text-normal\`, \`--header-primary\`, \`--background-primary\`…) : les écrans de Nebula
+  qui les nommaient se retrouvaient avec des teintes fausses, ou un fond qui ne
+  correspondait plus à celui du client. Trente et un emplacements ont été repris.
+- **La boutique le dit au lieu de tourner dans le vide.** La fenêtre « Ajouter un mode de
+  paiement » restait à charger indéfiniment : elle a besoin des rouages de paiement de
+  Discord, absents ici. Elle affiche maintenant l'explication habituelle.
+- **La bande vide au-dessus de la barre de compte** : l'encart de quête était masqué mais
+  sa boîte restait, et la boîte garde sa hauteur. Le masquage ne cherche plus un nom de
+  classe précis — Discord les renomme à chaque version — mais remonte jusqu'à l'élément
+  posé dans la barre latérale.
+
+### Mises à jour
+- **Une barre de progression s'affiche par-dessus le client**, où que tu sois, et dit quand
+  le téléchargement est fini. Elle n'existait que dans l'onglet Nebula : il fallait y
+  penser et l'ouvrir pour savoir où en était la mise à jour.
+
+### Diagnostic
+- **Le journal reçoit enfin ce que Nebula écrit depuis le client.** Il ne gardait que les
+  erreurs de Discord : les messages de Nebula — reconnexion à un compte, fermeture de la
+  passerelle, qualité du partage — n'y arrivaient jamais, alors que ce sont eux qu'on vient
+  y chercher dans \`%APPDATA%\\Nebula\\logs\\main.log\`.
+- Les réglages et les favoris étaient inaccessibles depuis une fenêtre de client
+  supplémentaire : la réponse n'était rendue qu'à la fenêtre principale.
+
 ## v1.2.8 — La base passe à DiscordBotClient 3.10.3
 
 Tout le cœur de l'application a été repris sur la version 3.10.3 du projet d'origine,

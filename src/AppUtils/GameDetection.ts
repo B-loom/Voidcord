@@ -58,17 +58,42 @@ export class GameDetection {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const games = (await res.json()) as DetectableGame[];
             const catalogue = new Map<string, { game: DetectableGame; isLauncher: boolean }>();
+            /*
+             * Un même nom d'exécutable est revendiqué par plusieurs jeux — « game.exe »,
+             * « launcher.exe », « client.exe »… Garder le premier venu revient à annoncer
+             * un jeu au hasard : on a vu SUPERHOT s'afficher sur un profil où il n'avait
+             * jamais été installé. Les noms partagés sont donc écartés — mieux vaut ne rien
+             * dire que dire n'importe quoi.
+             */
+            const proprietaires = new Map<string, Set<string>>();
+            for (const game of games) {
+                for (const executable of game.executables ?? []) {
+                    if (executable.os !== GameDetection.osName()) continue;
+                    const name = executable.name.split(/[\\/]/).pop()?.toLowerCase();
+                    if (!name) continue;
+                    const jeux = proprietaires.get(name) ?? new Set<string>();
+                    jeux.add(String(game.id ?? game.name));
+                    proprietaires.set(name, jeux);
+                }
+            }
+
+            let ecartes = 0;
             for (const game of games) {
                 for (const executable of game.executables ?? []) {
                     if (executable.os !== GameDetection.osName()) continue;
                     // Entries look like "steam/game.exe" or just "game.exe"
                     const name = executable.name.split(/[\\/]/).pop()?.toLowerCase();
                     if (!name) continue;
+                    if ((proprietaires.get(name)?.size ?? 0) > 1) {
+                        ecartes++;
+                        continue;
+                    }
                     if (!catalogue.has(name)) {
                         catalogue.set(name, { game, isLauncher: Boolean(executable.is_launcher) });
                     }
                 }
             }
+            if (ecartes) logger.info(`${ecartes} exécutable(s) écarté(s) : leur nom est revendiqué par plusieurs jeux`);
             GameDetection.catalogue = catalogue;
             GameDetection.catalogueLoadedAt = Date.now();
             logger.info(`Catalogue de jeux chargé: ${catalogue.size} exécutables reconnus`);

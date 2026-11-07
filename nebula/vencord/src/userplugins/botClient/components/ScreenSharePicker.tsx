@@ -10,9 +10,11 @@ import ErrorBoundary from "@components/ErrorBoundary";
 import { classNameFactory } from "@utils/css";
 import { Logger } from "@utils/Logger";
 import { closeModal, ModalContent, ModalFooter, ModalHeader, ModalRoot, ModalSize, openModal } from "@utils/modal";
-import { React } from "@webpack/common";
+import { FluxDispatcher, React } from "@webpack/common";
 
 import { Button, Forms } from "./legacyUi";
+import { ecrireStockage, lireStockage } from "./stockage";
+import { t } from "../langue";
 
 const cl = classNameFactory("vc-nebula-share-");
 const logger = new Logger("NebulaPartage", "#f5bde6");
@@ -41,22 +43,61 @@ export type Qualite = { hauteur: number; fps: number; };
 
 const CLE = "nebula-partage-qualite";
 
+const PAR_DEFAUT: Qualite = { hauteur: 1080, fps: 30 };
+
+/*
+ * Le choix vit d'abord ici : le partage le relit dans la foulée du clic, et Discord
+ * supprime le stockage de la page (voir stockage.ts), si bien qu'un aller-retour par
+ * le disque rendait toujours la valeur par défaut — d'où un partage bloqué à 1080p et
+ * 30 images/s. Le disque ne sert plus qu'à retrouver le choix au lancement suivant.
+ */
+let choixCourant: Qualite | undefined;
+
 /** Le dernier choix, relu au prochain partage plutôt que redemandé à zéro */
 export function qualiteRetenue (): Qualite {
+    if (choixCourant) return choixCourant;
     try {
-        const brut = JSON.parse(localStorage.getItem(CLE) || "");
-        if (typeof brut?.hauteur === "number" && typeof brut?.fps === "number") return brut;
+        const brut = JSON.parse(lireStockage(CLE) || "");
+        if (typeof brut?.hauteur === "number" && typeof brut?.fps === "number") {
+            choixCourant = brut;
+            return brut;
+        }
     } catch {
         // Un stockage vide ou abîmé n'est pas une raison de ne pas partager
     }
-    return { hauteur: 1080, fps: 30 };
+    return PAR_DEFAUT;
 }
 
 function retenirQualite (qualite: Qualite) {
+    choixCourant = qualite;
+    ecrireStockage(CLE, JSON.stringify(qualite));
+    prevenirDiscord(qualite);
+}
+
+/*
+ * Discord garde la qualité du partage dans un magasin à lui, ApplicationStreamingSettings,
+ * et c'est lui — pas la piste vidéo — qui décide ce qu'il négocie et ce qu'il affiche sur
+ * le badge du flux. Tant que Nebula se contentait de contraindre la piste et d'habiller
+ * setGoLiveSource, ce magasin restait sur ses 720p à 30 images/s d'origine : le choix du
+ * sélecteur n'arrivait jamais jusqu'à Discord, d'où un partage obstinément en 720p30.
+ *
+ * On lui dit donc ce qui a été choisi, par son action à lui. Le préréglage 3 est le mode
+ * personnalisé : sans lui Discord reprend sa propre échelle et ignore les deux valeurs.
+ */
+export function prevenirDiscord (qualite: Qualite) {
     try {
-        localStorage.setItem(CLE, JSON.stringify(qualite));
-    } catch {
-        // Tant pis : le partage en cours garde quand même le choix
+        const hauteur = qualite.hauteur > 0
+            ? qualite.hauteur
+            : Math.min(Math.round(window.screen?.height || 1080), 2160);
+        FluxDispatcher.dispatch({
+            type: "STREAM_UPDATE_SETTINGS",
+            preset: 3,
+            resolution: hauteur,
+            frameRate: qualite.fps,
+        } as any);
+        logger.info(`Qualité annoncée à Discord : ${hauteur}p à ${qualite.fps} images/s`);
+    } catch (error) {
+        logger.warn("Discord n'a pas accepté la qualité choisie", error);
     }
 }
 
@@ -68,14 +109,57 @@ function retenirQualite (qualite: Qualite) {
 export async function appliquerQualite (flux: MediaStream, qualite: Qualite) {
     const piste = flux.getVideoTracks()[0];
     if (!piste) return;
+
+    const depart = piste.getSettings();
+    const proportion = depart.width && depart.height ? depart.width / depart.height : 16 / 9;
+    const hauteur = qualite.hauteur > 0 ? qualite.hauteur : depart.height ?? 0;
+    const largeur = hauteur > 0 ? Math.round(hauteur * proportion) : 0;
+
     const contraintes: MediaTrackConstraints = { frameRate: { ideal: qualite.fps, max: qualite.fps } };
-    if (qualite.hauteur > 0) contraintes.height = { ideal: qualite.hauteur, max: qualite.hauteur };
+    if (hauteur > 0) {
+        contraintes.height = { ideal: hauteur, max: hauteur };
+        /*
+         * La largeur compte autant que la hauteur : sans elle, un plafond de largeur posé
+         * ailleurs décide seul de la définition, la hauteur suivant la proportion.
+         */
+        contraintes.width = { ideal: largeur, max: largeur };
+    }
+
     try {
         await piste.applyConstraints(contraintes);
-        logger.info(`Partage limité à ${qualite.hauteur || "la source"}${qualite.hauteur ? "p" : ""} à ${qualite.fps} images/s`);
+        const obtenu = piste.getSettings();
+        logger.info(`Partage réglé sur ${obtenu.width}×${obtenu.height} à ${obtenu.frameRate} images/s`);
     } catch (error) {
         logger.warn("La qualité demandée n'a pas pu être appliquée", error);
     }
+
+    protegerLaPiste(piste, contraintes);
+}
+
+/*
+ * Pourquoi le partage restait en 720p à 30 images/s, malgré tout le reste.
+ *
+ * Une fois le flux rendu, Discord repose ses propres contraintes sur la piste, et il y
+ * écrit `width: { max: 1280 }`. Mille deux cent quatre-vingts pixels de large sur une
+ * image 16/9, c'est exactement 720p : la hauteur suit la proportion, quelle que soit la
+ * valeur annoncée à côté. Le choix du sélecteur était donc bien appliqué — puis défait
+ * une seconde plus tard, sans un mot.
+ *
+ * La piste garde donc la définition choisie : les contraintes qui arrivent ensuite sont
+ * acceptées, mais la largeur, la hauteur et la cadence restent celles du sélecteur.
+ * Discord reste libre de descendre plus bas à l'encodage ; il ne rabaisse simplement plus
+ * la capture elle-même.
+ */
+function protegerLaPiste (piste: MediaStreamTrack, choisies: MediaTrackConstraints) {
+    const marquee = piste as MediaStreamTrack & { __nebulaProtegee?: boolean; };
+    if (marquee.__nebulaProtegee) return;
+
+    const original = piste.applyConstraints.bind(piste);
+    piste.applyConstraints = (contraintes?: MediaTrackConstraints) => original({
+        ...contraintes,
+        ...choisies,
+    });
+    marquee.__nebulaProtegee = true;
 }
 
 function Picker({ sources, onChoose, close }: {
@@ -100,9 +184,9 @@ function Picker({ sources, onChoose, close }: {
         <>
             <ModalHeader separator={false}>
                 <div className={cl("header")}>
-                    <Forms.FormTitle tag="h2" className={cl("title")}>Partager un écran</Forms.FormTitle>
+                    <Forms.FormTitle tag="h2" className={cl("title")}>{t("Partager un écran", "Share a screen")}</Forms.FormTitle>
                     <Forms.FormText className={cl("subtitle")}>
-                        Choisis ce que les autres verront.
+                        {t("Choisis ce que les autres verront.", "Choose what the others will see.")}
                     </Forms.FormText>
                 </div>
             </ModalHeader>
@@ -115,7 +199,7 @@ function Picker({ sources, onChoose, close }: {
                             className={cl(entry === kind ? "tab-current" : "tab")}
                             onClick={() => setKind(entry)}
                         >
-                            {entry === "screen" ? "Écrans" : "Fenêtres"}
+                            {entry === "screen" ? t("Écrans", "Screens") : t("Fenêtres", "Windows")}
                         </button>
                     ))}
                 </div>
@@ -123,8 +207,8 @@ function Picker({ sources, onChoose, close }: {
                 {shown.length === 0 ? (
                     <Forms.FormText className={cl("empty")}>
                         {kind === "screen"
-                            ? "Aucun écran détecté."
-                            : "Aucune fenêtre ouverte à partager."}
+                            ? t("Aucun écran détecté.", "No screen found.")
+                            : t("Aucune fenêtre ouverte à partager.", "No open window to share.")}
                     </Forms.FormText>
                 ) : (
                     <div className={cl("grid")}>
@@ -144,7 +228,7 @@ function Picker({ sources, onChoose, close }: {
                 )}
                 <div className={cl("quality")}>
                     <div className={cl("quality-row")}>
-                        <span className={cl("quality-label")}>Qualité</span>
+                        <span className={cl("quality-label")}>{t("Qualité", "Quality")}</span>
                         {RESOLUTIONS.map(entry => (
                             <button
                                 key={entry.label}
@@ -156,7 +240,7 @@ function Picker({ sources, onChoose, close }: {
                         ))}
                     </div>
                     <div className={cl("quality-row")}>
-                        <span className={cl("quality-label")}>Images/s</span>
+                        <span className={cl("quality-label")}>{t("Images/s", "Frames/s")}</span>
                         {IMAGES_PAR_SECONDE.map(fps => (
                             <button
                                 key={fps}
@@ -173,13 +257,13 @@ function Picker({ sources, onChoose, close }: {
             <ModalFooter>
                 <label className={cl("audio")}>
                     <input type="checkbox" checked={audio} onChange={event => setAudio(event.currentTarget.checked)} />
-                    Partager aussi le son de l'ordinateur
+                    {t("Partager aussi le son de l'ordinateur", "Also share the computer sound")}
                 </label>
                 <Button color={Button.Colors.BRAND} disabled={!chosen} onClick={() => share(chosen)}>
-                    Partager
+                    {t("Partager", "Share")}
                 </Button>
                 <Button color={Button.Colors.PRIMARY} look={Button.Looks.LINK} onClick={() => share(null)}>
-                    Annuler
+                    {t("Annuler", "Cancel")}
                 </Button>
             </ModalFooter>
         </>

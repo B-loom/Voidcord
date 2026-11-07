@@ -1,3 +1,4 @@
+import { enAnglais } from "@utils/langueNebula";
 /*
  * Vencord, a Discord client mod
  * Copyright (c) 2026 Vendicated and contributors
@@ -182,7 +183,13 @@ const DESCRIPTIONS: Record<string, string> = {
     YoutubeAdblock: "Bloque les publicités des vidéos YouTube et de l'activité Regarder ensemble",
 };
 
-/** The French description of a plugin, or its own text when none has been written yet */
+/**
+ * La description française d'un plugin, ou son texte d'origine.
+ *
+ * En anglais, c'est le texte de Vencord qui s'affiche : il est déjà dans la bonne
+ * langue, et le traduire deux fois ne ferait que l'éloigner de ce que l'auteur a écrit.
+ */
 export function frenchDescription(name: string, fallback: string) {
+    if (enAnglais()) return fallback;
     return DESCRIPTIONS[name] ?? fallback;
 }

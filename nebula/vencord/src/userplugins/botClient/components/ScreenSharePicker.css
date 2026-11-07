@@ -39,13 +39,13 @@
 }
 
 .vc-nebula-share-tab:hover {
-    background: var(--background-modifier-hover, rgb(255 255 255 / 5%));
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    background: rgb(255 255 255 / 5%);
+    color: var(--text-strong, #f2f3f5);
 }
 
 .vc-nebula-share-tab-current {
-    background: var(--brand-experiment-15a, rgb(88 101 242 / 15%));
-    color: var(--text-brand, var(--header-primary, var(--text-strong, #f2f3f5)));
+    background: rgb(88 101 242 / 15%);
+    color: var(--text-brand, var(--text-strong, #f2f3f5));
 }
 
 .vc-nebula-share-grid {
@@ -59,7 +59,7 @@
     padding: 8px;
     border: 2px solid transparent;
     border-radius: 10px;
-    background: var(--background-secondary, var(--background-base-lower, #2b2d31));
+    background: var(--background-base-low, #202024);
     color: inherit;
     font-family: inherit;
     text-align: left;
@@ -87,7 +87,7 @@
     display: block;
     margin-top: 8px;
     overflow: hidden;
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    color: var(--text-strong, #f2f3f5);
     font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -147,10 +147,10 @@
 
 .vc-nebula-share-chip:hover {
     background: rgb(255 255 255 / 5%);
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    color: var(--text-strong, #f2f3f5);
 }
 
 .vc-nebula-share-chip-current {
-    background: var(--brand-experiment-15a, rgb(88 101 242 / 15%));
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    background: rgb(88 101 242 / 15%);
+    color: var(--text-strong, #f2f3f5);
 }

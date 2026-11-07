@@ -40,6 +40,11 @@ export const enum IPCEvent {
     AccountOpenWindow = "app:account:open_client_window",
     RememberBot = "app:account:remember_bot",
     GetBotAccountIds = "app:account:bot_ids",
+    GetAccountTokens = "app:account:tokens",
+    OpenSettings = "app:settings:open",
+    GetSettings = "app:settings:get",
+    SaveSettings = "app:settings:save",
+    GetLangue = "app:langue",
     GetSupportInvite = "app:support_invite",
     SupportInviteCopied = "app:support_invite:copied",
     // Updates

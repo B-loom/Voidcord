@@ -34,6 +34,7 @@ import { isAllowedPopoutURL, setupIPCEvents } from "./IPCManager";
 import UserAuth from "./UserAuth";
 import { MessageEditorWindow } from "./Windows/MessageEditorWindow";
 import { SettingsWindow } from "./Windows/SettingsWindow";
+import { askLanguage } from "./Windows/LanguageWindow";
 import { StartupWindow } from "./Windows/StartupWindow";
 
 /**
@@ -323,6 +324,7 @@ export class DiscordBotClient extends EventEmitter {
             void app
                 .whenReady()
                 .then(async () => {
+                    await this.chooseLanguageIfNeeded();
                     this.startupWindow = new StartupWindow(
                         () => this.relaunch(),
                         () => this.quit(),
@@ -898,9 +900,20 @@ export class DiscordBotClient extends EventEmitter {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         win.webContents.on("console-message" as any, (details: any) => {
             const level = details?.level ?? details?.levelName;
-            if (level !== "error" && level !== "warning" && level !== 3 && level !== 2) return;
+            const message = String(details?.message ?? details ?? "");
             const where = details?.sourceId ? ` (${details.sourceId}:${details.lineNumber})` : "";
-            rendererLogger.error(`${details?.message ?? details}${where}`);
+            const grave = level === "error" || level === "warning" || level === 3 || level === 2;
+            /*
+             * Le journal ne recevait que les erreurs du client. Les messages que Nebula
+             * écrit elle-même pour expliquer ce qu'elle fait — reconnexion à un compte,
+             * fermeture de la passerelle, qualité du partage — n'y arrivaient donc jamais,
+             * alors que ce sont eux qu'on vient y chercher. Ils passent maintenant ; le
+             * bavardage de Discord, lui, reste dehors.
+             */
+            const deNebula = /Nebula/i.test(message);
+            if (!grave && !deNebula) return;
+            if (grave) rendererLogger.error(`${message}${where}`);
+            else rendererLogger.info(message);
         });
         win.webContents.on("render-process-gone", (event, details) => {
             rendererLogger.error("Le processus de rendu s'est arrêté:", details.reason, details.exitCode);
@@ -949,6 +962,27 @@ export class DiscordBotClient extends EventEmitter {
      * A brand new, empty Discord window with its own session: it opens on the login
      * screen, so any account or bot can be signed into it alongside the others.
      */
+
+    /**
+     * Au tout premier lancement, demander la langue avant tout le reste.
+     *
+     * Le choix est enregistré, et « langue_choisie » retient que la question a été
+     * posée : le remettre à faux dans config.json rouvre l'écran au lancement suivant.
+     * Si les réglages ne peuvent pas être écrits, la question n'est pas posée — elle
+     * reviendrait à chaque démarrage sans jamais pouvoir être retenue.
+     */
+    private async chooseLanguageIfNeeded () {
+        if (this.config.config.langue_choisie) return;
+        if (this.config.snapshot().readOnly) return;
+        try {
+            const langue = await askLanguage();
+            this.config.save({ ...this.config.config, langue, langue_choisie: true });
+            this.logger.info(`Langue choisie au premier lancement : ${langue}`);
+        } catch (error) {
+            this.logger.warn("Le choix de la langue a échoué, le français est gardé", error);
+        }
+    }
+
     async openBlankClientWindow () {
         return this.openClientWindow(null);
     }

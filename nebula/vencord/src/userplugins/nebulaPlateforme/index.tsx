@@ -7,6 +7,7 @@
 import { definePluginSettings } from "@api/Settings";
 import { Logger } from "@utils/Logger";
 import definePlugin, { OptionType } from "@utils/types";
+import { t } from "../botClient/langue";
 
 const logger = new Logger("NebulaPlateforme", "#f5bde6");
 
@@ -30,23 +31,25 @@ const PLATEFORMES: Record<string, { browser: string; os: string; } | null> = {
 const settings = definePluginSettings({
     plateforme: {
         type: OptionType.SELECT,
-        description: "Ce que les autres voient à côté de ton nom",
+        description: t("Ce que les autres voient à côté de ton nom", "What the others see next to your name"),
         restartNeeded: true,
         options: [
-            { label: "Ne rien changer", value: "auto", default: true },
-            { label: "Ordinateur", value: "ordinateur" },
-            { label: "Navigateur web", value: "navigateur" },
-            { label: "Téléphone Android", value: "android" },
+            { label: t("Ne rien changer", "Leave as is"), value: "auto", default: true },
+            { label: t("Ordinateur", "Desktop"), value: "ordinateur" },
+            { label: t("Navigateur web", "Web browser"), value: "navigateur" },
+            { label: t("Téléphone Android", "Android phone"), value: "android" },
             { label: "iPhone", value: "iphone" },
-            { label: "Console ou casque VR", value: "console" },
+            { label: t("Console ou casque VR", "Console or VR headset"), value: "console" },
         ],
     },
 });
 
 export default definePlugin({
     name: "NebulaPlateforme",
-    description:
+    description: t(
         "Choisis l'appareil depuis lequel tu as l'air de te connecter : ordinateur, navigateur, téléphone, console ou casque VR. Change seulement la pastille vue par les autres.",
+        "Choose the device you appear to be connecting from: desktop, browser, phone, console or VR headset. Only changes the dot the others see.",
+    ),
     authors: [
         {
             name: "Nebula",

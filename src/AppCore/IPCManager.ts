@@ -9,6 +9,7 @@ import GameDetection from "src/AppUtils/GameDetection";
 import { cacheValidatedBotToken } from "src/AppUtils/ValidateBotToken";
 
 import type { DiscordBotClient } from ".";
+import { localizedSetting, settingsDefinitions } from "../shared/Settings";
 import Constants from "./Constants";
 import { IPCEvent } from "./IPCEvents";
 import UserAuth from "./UserAuth";
@@ -229,6 +230,20 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
         .on(IPCEvent.GetSupportInvite, event => {
             event.returnValue = isTrustedClientFrame(event, mainApp) ? Constants.SupportInvite : null;
         })
+        .on(IPCEvent.GetLangue, event => {
+            // La langue sert à toutes les fenêtres de Nebula, y compris celle de connexion
+            event.returnValue = isAccountFrame(event, mainApp) ? mainApp.config.config.langue : null;
+        })
+        .on(IPCEvent.GetAccountTokens, event => {
+            /*
+             * Le sélecteur de comptes de Discord demande un jeton de façon synchrone, au
+             * moment du clic : une réponse différée arriverait trop tard. Les jetons ne
+             * sortent pas de l'application, et seules ses propres fenêtres les obtiennent.
+             */
+            event.returnValue = isAccountFrame(event, mainApp)
+                ? UserAuth.accounts.filter(a => a.id).map(a => ({ id: a.id as string, token: a.token }))
+                : null;
+        })
         .on(IPCEvent.GetBotAccountIds, event => {
             event.returnValue = isTrustedClientFrame(event, mainApp)
                 ? UserAuth.accounts.filter(a => a.bot && a.id).map(a => a.id as string)
@@ -295,6 +310,50 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
     mainApp.ipcMain.handle(IPCEvent.AccountOpenWindow, (event, token: string) => {
         if (!isAccountFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return mainApp.openClientWindow(token);
+    });
+    /*
+     * Les réglages lus et écrits depuis la page Nebula, à l'intérieur de Discord : la
+     * fenêtre à part reste, mais on n'est plus obligé d'y passer.
+     */
+    mainApp.ipcMain.handle(IPCEvent.GetSettings, event => {
+        if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
+        const langue = mainApp.config.config.langue;
+        /*
+         * Un aller-retour par JSON : les définitions sont gelées et typées « as const »,
+         * et l'IPC refusait de les copier (« An object could not be cloned »). La page
+         * recevait alors une liste vide et n'affichait aucun réglage.
+         */
+        return JSON.parse(JSON.stringify({
+            ...mainApp.config.snapshot(),
+            /*
+             * Les libellés partent déjà traduits, mais le reste de la définition doit
+             * suivre : sans le type ni la clé, la page affichait onze lignes sans le
+             * moindre bouton pour les changer.
+             */
+            definitions: settingsDefinitions.map(definition => {
+                const traduit = localizedSetting(definition, langue);
+                return {
+                    ...definition,
+                    displayName: traduit.displayName,
+                    description: traduit.description,
+                    options: "options" in definition
+                        ? definition.options.map(option => ({
+                            value: option.value,
+                            label: traduit.optionLabel(option.value, option.label),
+                        }))
+                        : undefined,
+                };
+            }),
+        }));
+    });
+    mainApp.ipcMain.handle(IPCEvent.SaveSettings, (event, valeur) => {
+        if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
+        return JSON.parse(JSON.stringify(mainApp.config.save(valeur)));
+    });
+    // Les réglages de Nebula, ouverts depuis l'onglet Nebula du client
+    mainApp.ipcMain.handle(IPCEvent.OpenSettings, event => {
+        if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
+        mainApp.openSettingsWindow();
     });
     // Updates
     mainApp.ipcMain.handle(IPCEvent.UpdateCheck, event => {

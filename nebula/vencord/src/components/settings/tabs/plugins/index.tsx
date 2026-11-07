@@ -45,6 +45,7 @@ import Plugins, { ExcludedPlugins, PluginMeta } from "~plugins";
 
 import { PluginCard } from "./PluginCard";
 import { UIElementsButton } from "./UIElements";
+import { t } from "@utils/langueNebula";
 
 export const cl = classNameFactory("vc-plugins-");
 export const logger = new Logger("PluginSettings", "#a6d189");
@@ -55,20 +56,20 @@ function ReloadRequiredCard({ required }: { required: boolean; }) {
             {required
                 ? (
                     <>
-                        <Heading tag="h4">Redémarrage nécessaire</Heading>
+                        <Heading tag="h4">{t("Redémarrage nécessaire", "Restart required")}</Heading>
                         <Paragraph className={cl("dep-text")}>
-                            Redémarre maintenant pour appliquer les nouveaux plugins et leurs réglages
+                            {t("Redémarre maintenant pour appliquer les nouveaux plugins et leurs réglages", "Restart now to apply new plugins and their settings")}
                         </Paragraph>
                         <Button onClick={() => location.reload()} className={cl("restart-button")}>
-                            Redémarrer
+                            {t("Redémarrer", "Restart")}
                         </Button>
                     </>
                 )
                 : (
                     <>
                         <Heading tag="h4">Gestion des plugins</Heading>
-                        <Paragraph>Clique sur la roue dentée ou l’icône d’information pour en savoir plus sur un plugin</Paragraph>
-                        <Paragraph>Les plugins munis d’une roue dentée ont des réglages que tu peux modifier.</Paragraph>
+                        <Paragraph>{t("Clique sur la roue dentée ou l’icône d’information pour en savoir plus sur un plugin", "Click the cog wheel or the info icon to learn more about a plugin")}</Paragraph>
+                        <Paragraph>{t("Les plugins munis d’une roue dentée ont des réglages que tu peux modifier.", "Plugins with a cog wheel have settings you can change.")}</Paragraph>
                     </>
                 )}
         </Card>
@@ -104,7 +105,7 @@ function ExcludedPluginsList({ search }: { search: string; }) {
         <Paragraph className={Margins.top16}>
             {matchingExcludedPlugins.length
                 ? <>
-                    <Paragraph>Cherchais-tu plutôt :</Paragraph>
+                    <Paragraph>{t("Cherchais-tu plutôt :", "Did you mean:")}</Paragraph>
                     <ul>
                         {matchingExcludedPlugins.map(([name, reason]) => (
                             <li key={name}>
@@ -113,7 +114,7 @@ function ExcludedPluginsList({ search }: { search: string; }) {
                         ))}
                     </ul>
                 </>
-                : "Aucun plugin ne correspond à cette recherche."
+                : t("Aucun plugin ne correspond à cette recherche.", "No plugins meet the search criteria.")
             }
         </Paragraph>
     );
@@ -128,7 +129,7 @@ function PluginSettings() {
         if (changes.hasChanges)
             promptToRestart("reload", {
                 children: <>
-                    <Heading className={Margins.bottom8}>Ces plugins demandent un redémarrage :</Heading>
+                    <Heading className={Margins.bottom8}>{t("Ces plugins demandent un redémarrage :", "The following plugins require a restart:")}</Heading>
                     <Paragraph>{Array.from(changes, k => k.split(".")[0]).join(", ")}</Paragraph>
                 </>
             });
@@ -230,7 +231,7 @@ function PluginSettings() {
 
         if (isRequired) {
             const tooltipText = p.required || !depMap[p.name]
-                ? "Ce plugin est nécessaire au fonctionnement de Vencord."
+                ? t("Ce plugin est nécessaire au fonctionnement de Vencord.", "This plugin is required for Vencord to function.")
                 : makeDependencyList(depMap[p.name]?.filter(d => settings.plugins[d].enabled));
 
             requiredPlugins.push(
@@ -272,10 +273,10 @@ function PluginSettings() {
             {nebulaPlugins.length > 0 && (
                 <>
                     <Heading tag="h4" className={classes(Margins.top20, Margins.bottom8)}>
-                        Plugins Nebula
+                        {t("Plugins Nebula", "Nebula plugins")}
                     </Heading>
                     <Paragraph className={Margins.bottom8}>
-                        Écrits pour ce client, et absents de Vencord.
+                        {t("Écrits pour ce client, et absents de Vencord.", "Written for this client, and not part of Vencord.")}
                     </Paragraph>
                     <div className={cl("grid")}>{nebulaPlugins}</div>
                     <Divider className={Margins.top20} />
@@ -283,13 +284,13 @@ function PluginSettings() {
             )}
 
             <Heading tag="h4" className={classes(Margins.top20, Margins.bottom8)}>
-                Filtres
+                {t("Filtres", "Filters")}
             </Heading>
 
             <ErrorBoundary noop>
                 <TextInput
                     inputClassName={cl("filter-control")}
-                    placeholder="Rechercher un plugin…"
+                    placeholder={t("Rechercher un plugin…", "Search for a plugin…")}
                     value={searchValue.value}
                     onChange={onSearch}
                     autoFocus
@@ -302,8 +303,8 @@ function PluginSettings() {
                         options={[
                             { label: "Tout afficher", value: SearchStatus.ALL, default: true },
                             { label: "Favoris", value: SearchStatus.FAVORITES },
-                            { label: "Activés", value: SearchStatus.ENABLED },
-                            { label: "Désactivés", value: SearchStatus.DISABLED },
+                            { label: t("Activés", "Enabled"), value: SearchStatus.ENABLED },
+                            { label: t("Désactivés", "Disabled"), value: SearchStatus.DISABLED },
                             { label: "Nouveaux", value: SearchStatus.NEW },
                             hasUserPlugins && { label: "Plugins personnels", value: SearchStatus.USER_PLUGINS },
                             { label: "Plugins techniques", value: SearchStatus.API_PLUGINS },
@@ -319,7 +320,7 @@ function PluginSettings() {
                         value={searchValue.tags}
                         onChange={tags => setSearchValue(prev => ({ ...prev, tags }))}
                         closeOnSelect={false}
-                        placeholder="Filtrer par étiquette"
+                        placeholder={t("Filtrer par étiquette", "Filter by tag")}
                         multi
                     />
                 </div>
@@ -332,7 +333,7 @@ function PluginSettings() {
                     <div className={cl("grid")}>
                         {plugins.length
                             ? plugins
-                            : <Paragraph>Aucun plugin ne correspond à cette recherche.</Paragraph>
+                            : <Paragraph>{t("Aucun plugin ne correspond à cette recherche.", "No plugins meet the search criteria.")}</Paragraph>
                         }
                     </div>
                 )
@@ -343,13 +344,13 @@ function PluginSettings() {
             <Divider className={Margins.top20} />
 
             <Heading tag="h4" className={classes(Margins.top20, Margins.bottom8)}>
-                Plugins nécessaires
+                {t("Plugins nécessaires", "Required plugins")}
             </Heading>
 
             <div className={cl("grid")}>
                 {requiredPlugins.length
                     ? requiredPlugins
-                    : <Paragraph>Aucun plugin ne correspond à cette recherche.</Paragraph>
+                    : <Paragraph>{t("Aucun plugin ne correspond à cette recherche.", "No plugins meet the search criteria.")}</Paragraph>
                 }
             </div>
         </SettingsTab >
@@ -359,7 +360,7 @@ function PluginSettings() {
 function makeDependencyList(deps: string[]) {
     return (
         <>
-            <Paragraph>Ce plugin est nécessaire à :</Paragraph>
+            <Paragraph>{t("Ce plugin est nécessaire à :", "This plugin is required by:")}</Paragraph>
             {deps.map((dep: string) => <Paragraph key={dep} className={cl("dep-text")}>{dep}</Paragraph>)}
         </>
     );

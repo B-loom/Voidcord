@@ -5,6 +5,7 @@
  */
 
 import { Logger } from "@utils/Logger";
+import { t } from "../langue";
 
 const logger = new Logger("NebulaBloque", "#f5bde6");
 
@@ -16,12 +17,51 @@ const logger = new Logger("NebulaBloque", "#f5bde6");
 const BLOCKED = [
     {
         title: "Envoyer un cadeau",
-        paragraphs: [
-            "Cette fenêtre offre un abonnement Nitro. Elle a besoin des rouages de paiement de Discord, qui n'existent que dans le client officiel.",
-            "Passe par Discord pour offrir un abonnement.",
+        paragraphs: () => [
+            t(
+                "Cette fenêtre offre un abonnement Nitro. Elle a besoin des rouages de paiement de Discord, qui n'existent que dans le client officiel.",
+                "This window gifts a Nitro subscription. It needs the payment machinery of Discord, which only exists in the official client.",
+            ),
+            t("Passe par Discord pour offrir un abonnement.", "Use Discord itself to gift a subscription."),
+        ],
+    },
+    /*
+     * La boutique s'ouvre, mais dès qu'on veut payer la fenêtre reste à tourner : le
+     * formulaire de carte est servi par les rouages de paiement de Discord, absents ici.
+     * Autant le dire tout de suite plutôt que de laisser trois points clignoter.
+     */
+    {
+        title: "Ajouter un mode de paiement",
+        paragraphs: () => moyenDePaiement(),
+    },
+    {
+        title: "Ajouter un moyen de paiement",
+        paragraphs: () => moyenDePaiement(),
+    },
+    {
+        title: "Valider l'achat",
+        paragraphs: () => [
+            t(
+                "Cet achat passe par les rouages de paiement de Discord, qui n'existent que dans le client officiel.",
+                "This purchase goes through the payment machinery of Discord, which only exists in the official client.",
+            ),
+            t("Passe par Discord pour acheter cet article.", "Use Discord itself to buy this item."),
         ],
     },
 ];
+
+function moyenDePaiement () {
+    return [
+        t(
+            "Cette fenêtre enregistre une carte ou un compte PayPal. Elle a besoin des rouages de paiement de Discord, qui n'existent que dans le client officiel.",
+            "This window saves a card or a PayPal account. It needs the payment machinery of Discord, which only exists in the official client.",
+        ),
+        t(
+            "Passe par Discord pour acheter ou gérer un moyen de paiement.",
+            "Use Discord itself to buy or manage a payment method.",
+        ),
+    ];
+}
 
 const ART = "https://cdn.discordapp.com/emojis/1399479404706660373.gif";
 
@@ -38,7 +78,7 @@ function replace(modal: HTMLElement, paragraphs: string[]) {
 
     const title = document.createElement("h2");
     title.className = "nebula-blocked-title";
-    title.textContent = "Rien à voir par ici";
+    title.textContent = t("Rien à voir par ici", "Nothing to see here");
 
     const body = document.createElement("div");
     body.className = "nebula-blocked-body";
@@ -53,16 +93,30 @@ function replace(modal: HTMLElement, paragraphs: string[]) {
 }
 
 /*
- * Hiding the quest panel left its wrapper behind, and the wrapper keeps its height: a
- * band of empty space above the account bar. The panel is found in the page and the
- * container holding it is hidden, rather than guessing at a class name.
+ * Masquer l'encart de quête laissait sa boîte derrière lui, et la boîte garde sa hauteur :
+ * une bande vide au-dessus de la barre de compte. Chercher un nom de classe précis
+ * (« contentWrapper ») ne tient pas, Discord les renomme à chaque build. On remonte donc
+ * jusqu'à l'élément posé directement dans la section des panneaux, et c'est celui-là
+ * qu'on masque : la bande part avec son contenu.
  */
-const QUEST_PARTS = '[class*="questProgress"], [class*="questAccepted"], [class*="questsPanel"], [class*="questPanel"]';
+const QUEST_PARTS = '[class*="questProgress"], [class*="questAccepted"], [class*="questsPanel"], [class*="questPanel"], [class*="questBar"]';
+
+/** Vrai pour la section qui contient la barre de compte en bas de la liste */
+function isPanelsSection(element: HTMLElement | null) {
+    return Boolean(element && /(^|\s)panels_/.test(String(element.className ?? "")));
+}
 
 function hideQuestPanel() {
     for (const node of document.querySelectorAll<HTMLElement>(QUEST_PARTS)) {
-        const holder = node.closest<HTMLElement>('[class*="contentWrapper"]') ?? node.parentElement;
-        if (!holder || holder.dataset.nebulaHidden) continue;
+        let holder: HTMLElement = node;
+        // Remonter tant que le parent n'est pas la section des panneaux
+        while (holder.parentElement && !isPanelsSection(holder.parentElement)) {
+            holder = holder.parentElement;
+            if (holder === document.body) break;
+        }
+        // Sans section des panneaux au-dessus, on s'en tient à l'encart lui-même
+        if (!isPanelsSection(holder.parentElement)) holder = node.parentElement ?? node;
+        if (holder === document.body || holder.dataset.nebulaHidden) continue;
         holder.dataset.nebulaHidden = "1";
         holder.style.display = "none";
     }
@@ -82,7 +136,7 @@ export function blockUnavailableModals() {
                 if (!modal || modal.dataset.nebulaBlocked) continue;
 
                 modal.dataset.nebulaBlocked = "1";
-                replace(modal, entry.paragraphs);
+                replace(modal, entry.paragraphs());
             }
         }
     };

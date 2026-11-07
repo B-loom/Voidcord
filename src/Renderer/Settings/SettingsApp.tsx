@@ -12,7 +12,7 @@ import {
 } from "@fluentui/react-components";
 import { useEffect, useState } from "react";
 
-import { type SettingDefinition, type Settings, settingsDefinitions } from "../../shared/Settings";
+import { localizedSetting, type SettingDefinition, type Settings, settingsDefinitions } from "../../shared/Settings";
 import { SettingsField } from "./SettingsField";
 import { useSettings } from "./useSettings";
 
@@ -31,16 +31,21 @@ export function SettingsApp () {
     }, []);
     const dark = state.draft.settings_theme === "dark" || (state.draft.settings_theme === "system" && systemDark);
     const disabled = state.loading || state.saving || !!state.snapshot?.readOnly;
+    const langue = state.draft.langue;
+    /** Les textes de la fenêtre elle-même, dans la langue choisie */
+    const t = (fr: string, en: string) => (langue === "en" ? en : fr);
     const search = query.trim().toLowerCase();
-    const visible = definitions.filter(
-        item => !item.hidden && `${item.displayName} ${item.description} ${item.key}`.toLowerCase().includes(search),
-    );
+    const visible = definitions.filter(item => {
+        if (item.hidden) return false;
+        const { displayName, description } = localizedSetting(item, langue);
+        return `${displayName} ${description} ${item.key}`.toLowerCase().includes(search);
+    });
     const status = state.saving
-        ? "Enregistrement…"
+        ? t("Enregistrement…", "Saving…")
         : !state.valid
-            ? "Vérifie les réglages signalés."
+            ? t("Vérifie les réglages signalés.", "Check the settings flagged below.")
             : state.dirty
-                ? "Modifications non enregistrées"
+                ? t("Modifications non enregistrées", "Unsaved changes")
                 : state.notice;
 
     return (
@@ -51,24 +56,24 @@ export function SettingsApp () {
         >
             <div className="settings-shell">
                 <header className="settings-header">
-                    <h1>Réglages</h1>
+                    <h1>{t("Réglages", "Settings")}</h1>
                     <Input
-                        aria-label="Rechercher dans tous les réglages"
-                        placeholder="Rechercher un réglage"
+                        aria-label={t("Rechercher dans tous les réglages", "Search all settings")}
+                        placeholder={t("Rechercher un réglage", "Search a setting")}
                         value={query}
                         onChange={(_, data) => setQuery(data.value)}
                         type="search"
                     />
                 </header>
                 <main className="settings-content" aria-busy={state.loading}>
-                    {state.loading && <Spinner label="Chargement des réglages…" />}
+                    {state.loading && <Spinner label={t("Chargement des réglages…", "Loading the settings…")} />}
                     {state.error && (
                         <MessageBar intent="error">
                             <MessageBarBody>
                                 {state.error}{" "}
                                 {!state.snapshot && (
                                     <Button onClick={() => void state.load()} disabled={state.loading}>
-                                        Réessayer
+                                        {t("Réessayer", "Try again")}
                                     </Button>
                                 )}
                             </MessageBarBody>
@@ -76,14 +81,14 @@ export function SettingsApp () {
                     )}
                     {state.snapshot?.warning && (
                         <MessageBar intent="warning">
-                            <MessageBarBody>{state.snapshot.warning} Les réglages sont en lecture seule.</MessageBarBody>
+                            <MessageBarBody>{state.snapshot.warning} {t("Les réglages sont en lecture seule.", "The settings are read-only.")}</MessageBarBody>
                         </MessageBar>
                     )}
                     {!state.valid && search && (
                         <MessageBar intent="error">
                             <MessageBarBody>
-                                Certains réglages demandent ton attention.{" "}
-                                <Button onClick={() => setQuery("")}>Afficher tous les réglages</Button>
+                                {t("Certains réglages demandent ton attention.", "Some settings need your attention.")}{" "}
+                                <Button onClick={() => setQuery("")}>{t("Afficher tous les réglages", "Show every setting")}</Button>
                             </MessageBarBody>
                         </MessageBar>
                     )}
@@ -94,6 +99,7 @@ export function SettingsApp () {
                                     <SettingsField
                                         key={definition.key}
                                         definition={definition}
+                                        langue={langue}
                                         value={state.draft[definition.key]}
                                         error={state.errors[definition.key]}
                                         disabled={disabled || !!definition.disabled}
@@ -103,8 +109,8 @@ export function SettingsApp () {
                             </ul>
                             {visible.length === 0 && (
                                 <div className="empty-state">
-                                    <p>Aucun réglage ne correspond.</p>
-                                    <Button onClick={() => setQuery("")}>Effacer la recherche</Button>
+                                    <p>{t("Aucun réglage ne correspond.", "No setting matches.")}</p>
+                                    <Button onClick={() => setQuery("")}>{t("Effacer la recherche", "Clear the search")}</Button>
                                 </div>
                             )}
                         </>
@@ -112,7 +118,7 @@ export function SettingsApp () {
                 </main>
                 <footer className="save-bar">
                     <Button appearance="subtle" disabled={disabled || !state.snapshot} onClick={state.reset}>
-                        Rétablir les valeurs par défaut
+                        {t("Rétablir les valeurs par défaut", "Restore the defaults")}
                     </Button>
                     <span className="save-status" role="status" aria-live="polite">
                         {status}

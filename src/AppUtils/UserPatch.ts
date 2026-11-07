@@ -7,8 +7,8 @@ import { APIUser } from "discord-api-types/v10";
  * redirected to the local files in `assets/branding` (see `sessionPatch`).
  */
 export default {
-    "47835198259200000": {
-        id: "47835198259200000",
+    "1565153191526400000": {
+        id: "1565153191526400000",
         username: "Sakura",
         global_name: "Sakura",
         avatar: "sakuraavatar0000000000000000000000",

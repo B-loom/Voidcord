@@ -47,7 +47,7 @@
 }
 
 .vc-nebula-card {
-    background: var(--background-secondary, #2b2d31);
+    background: var(--background-base-low, #202024);
     border-radius: 8px;
     padding: 4px 16px;
     margin-bottom: 12px;
@@ -58,7 +58,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
-    border-bottom: 1px solid var(--background-modifier-accent, #3f4147);
+    border-bottom: 1px solid var(--border-subtle, rgb(255 255 255 / 8%));
 }
 
 .vc-nebula-row:last-child {
@@ -66,13 +66,13 @@
 }
 
 .vc-nebula-rowLabel {
-    color: var(--header-secondary, #b5bac1);
+    color: var(--text-muted, #b5bac1);
     font-size: 14px;
     font-weight: 500;
 }
 
 .vc-nebula-rowValue {
-    color: var(--text-normal, #f2f3f5);
+    color: var(--text-default, #dbdee1);
     font-size: 14px;
     font-family: var(--font-code, monospace);
 }
@@ -124,7 +124,7 @@
 .vc-nebula-doc h5 {
     margin-top: 14px;
     margin-bottom: 2px;
-    color: var(--header-secondary, #b5bac1);
+    color: var(--text-muted, #b5bac1);
 }
 
 .vc-nebula-docText {
@@ -132,7 +132,7 @@
 }
 
 .vc-nebula-docItem {
-    color: var(--text-normal, #dbdee1);
+    color: var(--text-default, #dbdee1);
     line-height: 1.5;
     margin-left: 20px;
     list-style: disc;
@@ -143,7 +143,7 @@
 }
 
 .vc-nebula-docCode {
-    background: var(--background-secondary, #2b2d31);
+    background: var(--background-base-low, #202024);
     border-radius: 3px;
     padding: 1px 4px;
     font-family: var(--font-code, monospace);
@@ -177,7 +177,7 @@
 .vc-nebula-docRule {
     height: 1px;
     margin: 18px 0;
-    background: var(--background-modifier-accent, var(--border-subtle, rgb(255 255 255 / 8%)));
+    background: var(--border-subtle, rgb(255 255 255 / 8%));
 }
 
 .vc-nebula-docLink {
@@ -229,11 +229,58 @@
 
 .vc-nebula-progressText {
     position: relative;
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    color: var(--text-strong, #f2f3f5);
     font-size: 14px;
 }
 
 .vc-nebula-updateError {
     margin-top: 10px;
-    color: var(--text-danger, #f23f43);
+    color: var(--text-feedback-critical, #f23f43);
+}
+
+/* Les réglages de Nebula, affichés dans la page plutôt que dans une fenêtre à part */
+.vc-nebula-settingReload {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    margin: 12px 0 4px;
+    padding: 12px 14px;
+    border: 1px solid rgb(245 191 230 / 35%);
+    border-radius: 8px;
+    background: rgb(245 191 230 / 10%);
+}
+
+.vc-nebula-settingReload .vc-nebula-sectionText {
+    margin: 0;
+}
+
+.vc-nebula-settingRow {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle, rgb(255 255 255 / 8%));
+}
+
+.vc-nebula-settingText {
+    flex: 1;
+    min-width: 0;
+}
+
+.vc-nebula-settingControl {
+    flex-shrink: 0;
+}
+
+.vc-nebula-settingSelect,
+.vc-nebula-settingInput {
+    min-width: 180px;
+    padding: 7px 10px;
+    border: 1px solid var(--border-subtle, rgb(255 255 255 / 8%));
+    border-radius: 7px;
+    background: var(--background-base-lowest, #121214);
+    color: var(--text-default, #dbdee1);
+    font-family: inherit;
+    font-size: 14px;
 }

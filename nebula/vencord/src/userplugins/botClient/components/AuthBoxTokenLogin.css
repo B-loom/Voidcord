@@ -42,7 +42,7 @@
     content: "";
     flex: 1;
     height: 1px;
-    background: var(--border-subtle, var(--background-modifier-accent, var(--border-subtle, rgb(255 255 255 / 8%))));
+    background: var(--border-subtle, rgb(255 255 255 / 8%));
 }
 
 .vc-bot-client-auth-box-token-login-accountLink {

@@ -8,19 +8,20 @@ import { definePluginSettings } from "@api/Settings";
 import { Logger } from "@utils/Logger";
 import definePlugin, { OptionType } from "@utils/types";
 import { FluxDispatcher } from "@webpack/common";
+import { t } from "../botClient/langue";
 
 const logger = new Logger("NebulaStatut", "#f5bde6");
 
 const settings = definePluginSettings({
     hideGames: {
         type: OptionType.BOOLEAN,
-        description: "Ne pas montrer le jeu auquel tu joues",
+        description: t("Ne pas montrer le jeu auquel tu joues", "Do not show the game you are playing"),
         default: true,
         onChange: () => clearActivity(),
     },
     hideEverything: {
         type: OptionType.BOOLEAN,
-        description: "Ne montrer aucune activité, y compris la musique et les autres applications",
+        description: t("Ne montrer aucune activité, y compris la musique et les autres applications", "Show no activity at all, music and other applications included"),
         default: false,
         onChange: () => clearActivity(),
     },
@@ -51,8 +52,10 @@ function clearActivity() {
 
 export default definePlugin({
     name: "NebulaStatut",
-    description:
+    description: t(
         "Empêche ton activité d'apparaître sur ton profil : le jeu en cours, et si tu veux, tout le reste.",
+        "Keeps your activity off your profile: the running game, and everything else if you want.",
+    ),
     authors: [
         {
             name: "Nebula",

@@ -14,6 +14,8 @@ import { Button, Forms } from "./legacyUi";
 
 import { isUserAccountSession } from "../utils/patches";
 import { CHANGELOG, README } from "./docs";
+import { CHANGELOG_EN, README_EN } from "./docs.en";
+import { enAnglais, t } from "../langue";
 
 const cl = classNameFactory("vc-nebula-");
 
@@ -59,25 +61,28 @@ export function BotBillingTab() {
             <Forms.FormTitle tag="h3">Rien à voir par ici</Forms.FormTitle>
             {isUserSession ? (
                 <Forms.FormText className={cl("emptyText")}>
-                    Nebula ne prend pas en charge cette page. Elle a besoin des rouages de paiement et
-                    d’authentification de Discord, qui n’existent que dans le client officiel : passe par
-                    celui-ci pour y accéder.
+                    {t(
+                        "Nebula ne prend pas en charge cette page. Elle a besoin des rouages de paiement et d’authentification de Discord, qui n’existent que dans le client officiel : passe par celui-ci pour y accéder.",
+                        "Nebula does not support this page. It needs the payment and authentication machinery of Discord, which only exists in the official client: use that one to reach it.",
+                    )}
                 </Forms.FormText>
             ) : (
                 <>
                     <Forms.FormText className={cl("emptyText")}>
-                        Tu es connecté avec un bot. Cette page concerne les réglages d’un compte Discord : Nitro,
-                        abonnements, moyens de paiement, confidentialité, notifications… Un bot n’a rien de tout ça.
+                        {t(
+                            "Tu es connecté avec un bot. Cette page concerne les réglages d’un compte Discord : Nitro, abonnements, moyens de paiement, confidentialité, notifications… Un bot n’a rien de tout ça.",
+                            "You are signed in with a bot. This page is about the settings of a Discord account: Nitro, subscriptions, payment methods, privacy, notifications… A bot has none of that.",
+                        )}
                     </Forms.FormText>
                     <Forms.FormText className={cl("emptyText")}>
-                        Connecte-toi avec un compte Discord pour y accéder.
+                        {t("Connecte-toi avec un compte Discord pour y accéder.", "Sign in with a Discord account to reach it.")}
                     </Forms.FormText>
                     <Button
                         size={Button.Sizes.SMALL}
                         color={Button.Colors.BRAND}
                         onClick={() => openAccountModal()}
                     >
-                        Se connecter avec un compte
+                        {t("Se connecter avec un compte", "Sign in with an account")}
                     </Button>
                 </>
             )}
@@ -187,12 +192,189 @@ function inline(text: string) {
     });
 }
 
+/*
+ * La documentation et les nouveautés suivent la langue de Nebula. Les textes français
+ * sont les originaux — c'est la langue du projet — et docs.en.ts en porte la traduction.
+ */
 export function ReadmeTab() {
-    return <Markdown source={README} />;
+    return <Markdown source={enAnglais() ? README_EN : README} />;
+}
+
+type Definition = {
+    key: string;
+    displayName: string;
+    description: string;
+    hidden?: boolean;
+    type: "boolean" | "number" | "string" | "select";
+    defaultValue: unknown;
+    min?: number;
+    max?: number;
+    options?: { label: string; value: string; }[];
+};
+
+/*
+ * Les textes de Nebula sont lus une seule fois, au chargement de la page : les écrans
+ * déjà affichés gardent la langue d'avant. Recharger la fenêtre suffit — c'est ce que
+ * propose le bouton.
+ */
+const A_RECHARGER = new Set(["langue"]);
+
+/*
+ * Ceux-là touchent la session réseau d'Electron, posée une fois pour toutes au démarrage :
+ * recharger la page n'y change rien, il faut relancer Nebula.
+ */
+const A_RELANCER = new Set(["doh_provider", "use_system_proxy", "cache_assets"]);
+
+/**
+ * La page « Réglages » de la catégorie Nebula.
+ *
+ * Les réglages vivent dans le processus principal, pas dans Discord : la fenêtre à part
+ * existe toujours, mais passer par elle pour changer la langue était absurde. Ils se
+ * règlent donc ici, dans la page où on vient les chercher. Chaque changement est écrit
+ * tout de suite ; il n'y a pas de bouton « Enregistrer » à oublier.
+ */
+export function SettingsTab() {
+    const [definitions, setDefinitions] = React.useState<Definition[]>([]);
+    const [valeurs, setValeurs] = React.useState<Record<string, unknown> | null>(null);
+    const [lectureSeule, setLectureSeule] = React.useState(false);
+    const [note, setNote] = React.useState<string | null>(null);
+    const [erreur, setErreur] = React.useState<string | null>(null);
+    const [aRecharger, setARecharger] = React.useState<"page" | "app" | null>(null);
+
+    React.useEffect(() => {
+        let vivant = true;
+        native()?.getSettings?.()
+            .then((reponse: any) => {
+                if (!vivant) return;
+                setDefinitions(reponse?.definitions ?? []);
+                setValeurs(reponse?.settings ?? {});
+                setLectureSeule(Boolean(reponse?.readOnly));
+                if (reponse?.warning) setErreur(reponse.warning);
+            })
+            .catch((e: Error) => vivant && setErreur(e?.message ?? String(e)));
+        return () => { vivant = false; };
+    }, []);
+
+    const changer = (cle: string, valeur: unknown) => {
+        if (!valeurs) return;
+        const suivant = { ...valeurs, [cle]: valeur };
+        setValeurs(suivant);
+        setErreur(null);
+        native()?.saveSettings?.(suivant)
+            .then((reponse: any) => {
+                setValeurs(reponse?.settings ?? suivant);
+                /*
+                 * Les textes de Nebula sont lus une fois, au chargement de la page : les
+                 * écrans déjà affichés gardent la langue d'avant. Changer la langue ne
+                 * semblait donc rien faire. Le choix est bien enregistré — il manquait de
+                 * le dire, et d'offrir le rechargement qui l'applique.
+                 */
+                if (A_RECHARGER.has(cle) || A_RELANCER.has(cle)) {
+                    setARecharger(A_RECHARGER.has(cle) ? "page" : "app");
+                    setNote(null);
+                } else {
+                    setNote(t("Enregistré", "Saved"));
+                    setTimeout(() => setNote(null), 1500);
+                }
+            })
+            .catch((e: Error) => setErreur(e?.message ?? String(e)));
+    };
+
+    if (erreur && !valeurs) {
+        return (
+            <div className={cl("tab")}>
+                <Forms.FormText className={cl("updateError")}>{erreur}</Forms.FormText>
+            </div>
+        );
+    }
+    if (!valeurs) {
+        return (
+            <div className={cl("tab")}>
+                <Forms.FormText className={cl("sectionText")}>{t("Chargement…", "Loading…")}</Forms.FormText>
+            </div>
+        );
+    }
+
+    return (
+        <div className={cl("tab")}>
+            <Forms.FormSection title={t("Réglages de Nebula", "Nebula settings")}>
+                {erreur && <Forms.FormText className={cl("updateError")}>{erreur}</Forms.FormText>}
+                {aRecharger && (
+                    <div className={cl("settingReload")}>
+                        <Forms.FormText className={cl("sectionText")}>
+                            {aRecharger === "page"
+                                ? t(
+                                    "Enregistré. Les textes déjà affichés gardent l'ancienne langue : recharge pour l'appliquer.",
+                                    "Saved. Text already on screen keeps the old language: reload to apply it.",
+                                )
+                                : t(
+                                    "Enregistré. Ce réglage ne prendra effet qu'au prochain lancement de Nebula.",
+                                    "Saved. This setting only takes effect the next time Nebula starts.",
+                                )}
+                        </Forms.FormText>
+                        {aRecharger === "page" && (
+                            <Button size={Button.Sizes.SMALL} onClick={() => location.reload()}>
+                                {t("Recharger maintenant", "Reload now")}
+                            </Button>
+                        )}
+                    </div>
+                )}
+                {definitions.filter(d => !d.hidden).map(definition => (
+                    <div key={definition.key} className={cl("settingRow")}>
+                        <div className={cl("settingText")}>
+                            <Forms.FormTitle tag="h5">{definition.displayName}</Forms.FormTitle>
+                            <Forms.FormText className={cl("sectionText")}>{definition.description}</Forms.FormText>
+                        </div>
+                        <div className={cl("settingControl")}>
+                            {definition.type === "boolean" && (
+                                <input
+                                    type="checkbox"
+                                    disabled={lectureSeule}
+                                    checked={Boolean(valeurs[definition.key])}
+                                    onChange={event => changer(definition.key, event.currentTarget.checked)}
+                                />
+                            )}
+                            {definition.type === "select" && (
+                                <select
+                                    className={cl("settingSelect")}
+                                    disabled={lectureSeule}
+                                    value={String(valeurs[definition.key] ?? "")}
+                                    onChange={event => changer(definition.key, event.currentTarget.value)}
+                                >
+                                    {(definition.options ?? []).map(option => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                </select>
+                            )}
+                            {definition.type === "number" && (
+                                <input
+                                    className={cl("settingInput")}
+                                    type="number"
+                                    disabled={lectureSeule}
+                                    value={Number(valeurs[definition.key] ?? 0)}
+                                    min={definition.min}
+                                    onChange={event => {
+                                        const n = Number(event.currentTarget.value);
+                                        if (Number.isFinite(n)) changer(definition.key, n);
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                ))}
+                <Forms.FormText className={cl("sectionText")}>
+                    {note ?? t(
+                        "Certains réglages ne prennent effet qu'au lancement suivant.",
+                        "Some settings only take effect on the next launch.",
+                    )}
+                </Forms.FormText>
+            </Forms.FormSection>
+        </div>
+    );
 }
 
 export function ChangelogTab() {
-    return <Markdown source={CHANGELOG} />;
+    return <Markdown source={enAnglais() ? CHANGELOG_EN : CHANGELOG} />;
 }
 
 type UpdateState = {
@@ -203,14 +385,14 @@ type UpdateState = {
 };
 
 /** What each state means to someone reading the page, and the colour of its dot */
-const UPDATE_LABELS: Record<UpdateState["state"], { text: string; tone: "good" | "bad" | "wait"; }> = {
-    idle: { text: "Non vérifié", tone: "wait" },
-    checking: { text: "Vérification…", tone: "wait" },
-    "up-to-date": { text: "À jour", tone: "good" },
-    available: { text: "Mise à jour disponible", tone: "bad" },
-    downloading: { text: "Téléchargement…", tone: "wait" },
-    ready: { text: "Prête à installer", tone: "bad" },
-    error: { text: "Vérification impossible", tone: "bad" },
+const UPDATE_LABELS: Record<UpdateState["state"], { text: () => string; tone: "good" | "bad" | "wait"; }> = {
+    idle: { text: () => t("Non vérifié", "Not checked"), tone: "wait" },
+    checking: { text: () => t("Vérification…", "Checking…"), tone: "wait" },
+    "up-to-date": { text: () => t("À jour", "Up to date"), tone: "good" },
+    available: { text: () => t("Mise à jour disponible", "Update available"), tone: "bad" },
+    downloading: { text: () => t("Téléchargement…", "Downloading…"), tone: "wait" },
+    ready: { text: () => t("Prête à installer", "Ready to install"), tone: "bad" },
+    error: { text: () => t("Vérification impossible", "Could not check"), tone: "bad" },
 };
 
 /** Follows the update as the main process reports it */
@@ -256,7 +438,7 @@ export default function NebulaTab() {
                         Nebula
                     </Forms.FormTitle>
                     <Forms.FormText className={cl("heroBody")}>
-                        Connecte-toi à tes comptes Discord et à tes bots depuis un seul client.
+                        {t("Connecte-toi à tes comptes Discord et à tes bots depuis un seul client.", "Sign in to your Discord accounts and your bots from a single client.")}
                     </Forms.FormText>
                     <Button
                         size={Button.Sizes.SMALL}
@@ -265,38 +447,38 @@ export default function NebulaTab() {
                         disabled={update.state === "checking" || update.state === "downloading"}
                         onClick={() => native()?.checkForUpdates?.()}
                     >
-                        {update.state === "checking" ? "Vérification…" : "Vérifier les mises à jour"}
+                        {update.state === "checking" ? t("Vérification…", "Checking…") : t("Vérifier les mises à jour", "Check for updates")}
                     </Button>
                 </div>
                 <img src={BrandEmoji} alt="" className={cl("heroArt")} />
             </div>
 
-            <Forms.FormSection title="Informations">
+            <Forms.FormSection title={t("Informations", "Information")}>
                 <div className={cl("card")}>
-                    <Row label="Application" value={name} />
+                    <Row label={t("Application", "Application")} value={name} />
                     <Row label="Version" value={`v${version}`} />
                     <div className={cl("row")}>
-                        <span className={cl("rowLabel")}>Mise à jour</span>
+                        <span className={cl("rowLabel")}>{t("Mise à jour", "Update")}</span>
                         <span className={cl("rowValue")}>
                             <span className={cl(`dot-${updateLabel.tone}`)} />
-                            {updateLabel.text}
+                            {updateLabel.text()}
                             {update.version && update.state === "available" ? ` (v${update.version})` : ""}
                         </span>
                     </div>
                     <Row label="Chromium" value={chrome} />
                     <Row label="Electron" value={electron} />
-                    <Row label="Plateforme" value={navigator.platform} />
-                    <Row label="Langue" value={navigator.language} />
-                    <Row label="Build Discord" value={String((window as any).GLOBAL_ENV?.BUILD_NUMBER ?? "inconnu")} />
-                    <Row label="Canal" value={String((window as any).GLOBAL_ENV?.RELEASE_CHANNEL ?? "inconnu")} />
-                    <Row label="Session" value={isUserSession ? "Compte utilisateur" : "Bot"} />
-                    <Row label="Cœurs CPU" value={String(navigator.hardwareConcurrency ?? "inconnu")} />
+                    <Row label={t("Plateforme", "Platform")} value={navigator.platform} />
+                    <Row label={t("Langue", "Language")} value={navigator.language} />
+                    <Row label={t("Build Discord", "Discord build")} value={String((window as any).GLOBAL_ENV?.BUILD_NUMBER ?? t("inconnu", "unknown"))} />
+                    <Row label={t("Canal", "Channel")} value={String((window as any).GLOBAL_ENV?.RELEASE_CHANNEL ?? t("inconnu", "unknown"))} />
+                    <Row label={t("Session", "Session")} value={isUserSession ? t("Compte utilisateur", "User account") : "Bot"} />
+                    <Row label={t("Cœurs CPU", "CPU cores")} value={String(navigator.hardwareConcurrency ?? t("inconnu", "unknown"))} />
                 </div>
                 {update.state === "downloading" && (
                     <div className={cl("progress")}>
                         <div className={cl("progressBar")} style={{ width: `${update.percent ?? 0}%` }} />
                         <span className={cl("progressText")}>
-                            Téléchargement de la mise à jour : {update.percent ?? 0} %
+                            {t("Téléchargement de la mise à jour", "Downloading the update")} : {update.percent ?? 0} %
                         </span>
                     </div>
                 )}
@@ -310,7 +492,7 @@ export default function NebulaTab() {
                             color={Button.Colors.GREEN}
                             onClick={() => native()?.installUpdate?.()}
                         >
-                            Redémarrer et installer
+                            {t("Redémarrer et installer", "Restart and install")}
                         </Button>
                     )}
                     <Button
@@ -322,22 +504,36 @@ export default function NebulaTab() {
                             setTimeout(() => setCopied(false), 2000);
                         }}
                     >
-                        {copied ? "Copié !" : "Copier les informations"}
+                        {copied ? t("Copié !", "Copied!") : t("Copier les informations", "Copy the information")}
                     </Button>
                     <Button
                         size={Button.Sizes.SMALL}
                         color={Button.Colors.PRIMARY}
                         onClick={() => location.reload()}
                     >
-                        Recharger le client
+                        {t("Recharger le client", "Reload the client")}
+                    </Button>
+                    {/*
+                      * Les réglages de Nebula — langue, écran de démarrage, mises à jour
+                      * automatiques, DNS — vivent dans une fenêtre à part, jusqu'ici
+                      * atteignable seulement par l'icône de la zone de notification.
+                      */}
+                    <Button
+                        size={Button.Sizes.SMALL}
+                        color={Button.Colors.BRAND}
+                        onClick={() => native()?.openSettings?.()}
+                    >
+                        {t("Réglages de Nebula", "Nebula settings")}
                     </Button>
                 </div>
             </Forms.FormSection>
 
-            <Forms.FormSection title="Comptes">
+            <Forms.FormSection title={t("Comptes", "Accounts")}>
                 <Forms.FormText className={cl("sectionText")}>
-                    Les comptes connectés avec une adresse e-mail et un mot de passe sont enregistrés sur cet
-                    ordinateur. Tu peux les gérer depuis la fenêtre de connexion.
+                    {t(
+                        "Les comptes connectés avec une adresse e-mail et un mot de passe sont enregistrés sur cet ordinateur. Tu peux les gérer depuis la fenêtre de connexion.",
+                        "Accounts signed in with an email address and a password are saved on this computer. You can manage them from the sign-in window.",
+                    )}
                 </Forms.FormText>
                 <div className={cl("actions")}>
                     <Button
@@ -345,7 +541,7 @@ export default function NebulaTab() {
                         color={Button.Colors.BRAND}
                         onClick={() => openAccountModal()}
                     >
-                        Ouvrir la fenêtre de connexion
+                        {t("Ouvrir la fenêtre de connexion", "Open the sign-in window")}
                     </Button>
                 </div>
             </Forms.FormSection>

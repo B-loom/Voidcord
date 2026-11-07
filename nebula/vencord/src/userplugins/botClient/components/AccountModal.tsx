@@ -13,6 +13,7 @@ import { closeModal, ModalContent, ModalFooter, ModalHeader, ModalRoot, ModalSiz
 import { React, TextInput } from "@webpack/common";
 
 import { Button, Forms } from "./legacyUi";
+import { t } from "../langue";
 
 const cl = classNameFactory("vc-nebula-account-");
 const logger = new Logger("NebulaComptes", "#f5bde6");
@@ -33,12 +34,12 @@ type Step =
     | { name: "mfa"; ticket: string; methods: string[]; }
     | { name: "done"; username: string; token: string; };
 
-const MFA_LABELS: Record<string, string> = {
-    totp: "Application d'authentification",
-    sms: "Code par SMS",
-    backup: "Code de secours",
-    webauthn: "Clé de sécurité",
-    password: "Mot de passe",
+const MFA_LABELS: Record<string, () => string> = {
+    totp: () => t("Application d'authentification", "Authenticator app"),
+    sms: () => t("Code par SMS", "SMS code"),
+    backup: () => t("Code de secours", "Backup code"),
+    webauthn: () => t("Clé de sécurité", "Security key"),
+    password: () => t("Mot de passe", "Password"),
 };
 
 function AccountModal({ close }: { close: () => void; }) {
@@ -56,14 +57,14 @@ function AccountModal({ close }: { close: () => void; }) {
      * second factor to ask for, an error to show, or a token to keep.
      */
     const handle = async (result: AuthResult | undefined): Promise<void> => {
-        if (!result) return setError("Aucune réponse de Discord.");
+        if (!result) return setError(t("Aucune réponse de Discord.", "No answer from Discord."));
 
         switch (result.status) {
             case "success":
                 setError(null);
                 setStep({
                     name: "done",
-                    username: result.account?.username ?? "ton compte",
+                    username: result.account?.username ?? t("ton compte", "your account"),
                     token: result.token,
                 });
                 return;
@@ -81,14 +82,14 @@ function AccountModal({ close }: { close: () => void; }) {
                 setError(null);
                 // hCaptcha only runs on a page Discord itself serves, hence its own window
                 const key = await native()?.accountSolveCaptcha?.(result.sitekey, result.rqdata ?? null);
-                if (!key) return setError("Captcha abandonné.");
+                if (!key) return setError(t("Captcha abandonné.", "Captcha abandoned."));
                 return handle(
                     await native()?.accountLogin?.(login, password, { key, rqtoken: result.rqtoken ?? null }),
                 );
             }
 
             default:
-                setError(result.message ?? "Connexion impossible.");
+                setError(result.message ?? t("Connexion impossible.", "Sign-in failed."));
         }
     };
 
@@ -100,7 +101,7 @@ function AccountModal({ close }: { close: () => void; }) {
     const readableError = (e: unknown) => {
         const raw = String((e as Error)?.message ?? e);
         const stripped = raw.replace(/^Error invoking remote method '[^']*':\s*/, "").replace(/^Error:\s*/, "");
-        return stripped || "La connexion a échoué.";
+        return stripped || t("La connexion a échoué.", "The sign-in failed.");
     };
 
     const run = async (work: () => Promise<AuthResult>) => {
@@ -120,12 +121,12 @@ function AccountModal({ close }: { close: () => void; }) {
             <ModalHeader separator={false}>
                 <div className={cl("header")}>
                     <Forms.FormTitle tag="h2" className={cl("title")}>
-                        {step.name === "mfa" ? "Vérification en deux étapes" : "Ajouter un compte"}
+                        {step.name === "mfa" ? t("Vérification en deux étapes", "Two-step verification") : t("Ajouter un compte", "Add an account")}
                     </Forms.FormTitle>
                     <Forms.FormText className={cl("subtitle")}>
                         {step.name === "mfa"
-                            ? "Saisis le code demandé par Discord."
-                            : "Un compte Discord, ou un bot avec son token."}
+                            ? t("Saisis le code demandé par Discord.", "Enter the code Discord is asking for.")
+                            : t("Un compte Discord, ou un bot avec son token.", "A Discord account, or a bot with its token.")}
                     </Forms.FormText>
                 </div>
             </ModalHeader>
@@ -135,10 +136,10 @@ function AccountModal({ close }: { close: () => void; }) {
 
                 {step.name === "login" && (
                     <>
-                        <div className={cl("label")}>Adresse e-mail ou numéro de téléphone</div>
+                        <div className={cl("label")}>{t("Adresse e-mail ou numéro de téléphone", "Email address or phone number")}</div>
                         <TextInput value={login} onChange={setLogin} placeholder="exemple@mail.com" />
 
-                        <div className={cl("label")}>Mot de passe</div>
+                        <div className={cl("label")}>{t("Mot de passe", "Password")}</div>
                         <TextInput type="password" value={password} onChange={setPassword} />
 
                         <Button
@@ -147,17 +148,17 @@ function AccountModal({ close }: { close: () => void; }) {
                             disabled={busy || !login || !password}
                             onClick={() => run(() => native()?.accountLogin?.(login, password))}
                         >
-                            {busy ? "Connexion…" : "Se connecter"}
+                            {busy ? t("Connexion…", "Signing in…") : t("Se connecter", "Sign in")}
                         </Button>
 
-                        <div className={cl("separator")}>ou</div>
+                        <div className={cl("separator")}>{t("ou", "or")}</div>
 
-                        <div className={cl("label")}>Token de compte ou de bot</div>
+                        <div className={cl("label")}>{t("Token de compte ou de bot", "Account or bot token")}</div>
                         <TextInput
                             type="password"
                             value={token}
                             onChange={setToken}
-                            placeholder="Se connecter sans mot de passe"
+                            placeholder={t("Se connecter sans mot de passe", "Sign in without a password")}
                         />
                         <Button
                             className={cl("wide")}
@@ -165,7 +166,7 @@ function AccountModal({ close }: { close: () => void; }) {
                             disabled={busy || !token}
                             onClick={() => run(() => native()?.accountTokenLogin?.(token))}
                         >
-                            Se connecter avec ce token
+                            {t("Se connecter avec ce token", "Sign in with this token")}
                         </Button>
                     </>
                 )}
@@ -180,7 +181,7 @@ function AccountModal({ close }: { close: () => void; }) {
                                         className={cl(entry === method ? "method-current" : "method")}
                                         onClick={() => setMethod(entry)}
                                     >
-                                        {MFA_LABELS[entry] ?? entry}
+                                        {MFA_LABELS[entry]?.() ?? entry}
                                     </button>
                                 ))}
                             </div>
@@ -192,12 +193,12 @@ function AccountModal({ close }: { close: () => void; }) {
                                 color={Button.Colors.PRIMARY}
                                 onClick={() => native()?.accountSendSms?.(step.ticket)}
                             >
-                                Recevoir le code par SMS
+                                {t("Recevoir le code par SMS", "Get the code by SMS")}
                             </Button>
                         )}
 
                         <div className={cl("label")}>
-                            {method === "backup" ? "Code de secours" : "Code à six chiffres"}
+                            {method === "backup" ? t("Code de secours", "Backup code") : t("Code à six chiffres", "Six-digit code")}
                         </div>
                         <TextInput value={code} onChange={setCode} placeholder="123456" />
 
@@ -207,7 +208,7 @@ function AccountModal({ close }: { close: () => void; }) {
                             disabled={busy || !code}
                             onClick={() => run(() => native()?.accountMfa?.(step.ticket, code, method))}
                         >
-                            {busy ? "Vérification…" : "Vérifier"}
+                            {busy ? t("Vérification…", "Checking…") : t("Vérifier", "Check")}
                         </Button>
                     </>
                 )}
@@ -215,21 +216,21 @@ function AccountModal({ close }: { close: () => void; }) {
                 {step.name === "done" && (
                     <div className={cl("done")}>
                         <div className={cl("label")}>
-                            {step.username} est enregistré sur cet ordinateur.
+                            {t(`${step.username} est enregistré sur cet ordinateur.`, `${step.username} is saved on this computer.`)}
                         </div>
                         <Button
                             className={cl("wide")}
                             color={Button.Colors.BRAND}
                             onClick={() => native()?.accountUse?.(step.token)}
                         >
-                            Ouvrir Discord avec ce compte
+                            {t("Ouvrir Discord avec ce compte", "Open Discord with this account")}
                         </Button>
                         <Button
                             className={cl("wide")}
                             color={Button.Colors.PRIMARY}
                             onClick={() => native()?.accountOpenWindow?.(step.token)}
                         >
-                            Ouvrir dans une nouvelle fenêtre
+                            {t("Ouvrir dans une nouvelle fenêtre", "Open in a new window")}
                         </Button>
                     </div>
                 )}
@@ -246,10 +247,10 @@ function AccountModal({ close }: { close: () => void; }) {
                             setStep({ name: "login" });
                         }}
                     >
-                        Retour
+                        {t("Retour", "Back")}
                     </Button>
                 )}
-                <Button color={Button.Colors.PRIMARY} onClick={close}>Fermer</Button>
+                <Button color={Button.Colors.PRIMARY} onClick={close}>{t("Fermer", "Close")}</Button>
             </ModalFooter>
         </>
     );

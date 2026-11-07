@@ -78,9 +78,11 @@ export default class Constants extends null {
     static DiscordGuildExperimentsPath = path.join(app.getAppPath(), "assets", "snapshot", "guild_experiments.json");
     static DiscordUserExperimentsPath = path.join(app.getAppPath(), "assets", "snapshot", "user_experiments.json");
     static DiscordApexExperimentsPath = path.join(app.getAppPath(), "assets", "snapshot", "apex_experiments.json");
-    static UserDefaultPatch = UserPatch["47835198259200000"];
+    static UserDefaultPatch = UserPatch["1565153191526400000"];
     static ChannelIdDefault = "1000000000000000000";
-    static UserIdDefault = "47835198259200000"; // Snowflake du 13 mai 2015, date de creation de Discord
+    /** Le compte système de Nebula. Son flocon date du 29 octobre 2026, jour de la
+     * première version publiée : c'est la date de création qu'affiche son profil. */
+    static UserIdDefault = "1565153191526400000";
     static CustomDiscordDomain = "discord.com";
     static DefaultLocale = "fr-FR";
     /** This user gets the Moderator Programs Alumni badge */

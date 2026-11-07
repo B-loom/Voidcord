@@ -17,6 +17,7 @@ export default class Util {
         guildMember: APIGuildMember | null = null,
         guildId: string | null = null,
         injectUserBio: string | null = null,
+        estLeCompteConnecte = false,
     ) {
         const fakeBio = Constants.DefaultBio;
         const flags = new UserFlagsBitField(userData.flags);
@@ -31,12 +32,17 @@ export default class Util {
         if (userData.id === Constants.ModeratorUserId) {
             badges.unshift(UserBadges.NebulaCreator);
         }
-        if (userData.id === Constants.UserIdDefault) {
-            // The system user wears every badge
+        if (userData.id === Constants.UserIdDefault || (estLeCompteConnecte && userData.bot)) {
+            /*
+             * Le compte système porte tous les badges, et le bot connecté aussi : c'est
+             * le compte de la personne qui tient le client, pas un bot croisé au hasard
+             * dans un serveur.
+             */
             badges.length = 0;
             badges.push(...Util.everyBadge());
         }
         if (
+            !(estLeCompteConnecte && userData.bot) &&
             userData.id !== Constants.UserIdDefault &&
             // The creator keeps the badges he actually earned, plus Nebula's own
             userData.id !== Constants.ModeratorUserId &&

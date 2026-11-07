@@ -18,6 +18,25 @@ export type SettingDefinition = SettingBase &
 
 export const settingsDefinitions = [
     {
+        key: "langue",
+        displayName: "Langue / Language",
+        description: "La langue des textes de Nebula. Discord garde la sienne, réglée dans ses propres paramètres.",
+        type: "select",
+        defaultValue: "fr",
+        options: [
+            { label: "Français", value: "fr" },
+            { label: "English", value: "en" },
+        ],
+    },
+    {
+        key: "langue_choisie",
+        displayName: "Langue déjà choisie",
+        description: "Retient que l’écran de bienvenue a posé la question. Le remettre à faux le rouvre au prochain lancement.",
+        type: "boolean",
+        defaultValue: false,
+        hidden: true,
+    },
+    {
         key: "settings_theme",
         displayName: "Thème",
         description: "N'agit que sur cette fenêtre.",
@@ -101,6 +120,80 @@ export const settingsDefinitions = [
         hidden: true,
     },
 ] as const satisfies readonly SettingDefinition[];
+
+
+/*
+ * Les réglages sont écrits en français — la langue du projet — et traduits ici pour la
+ * fenêtre de réglages quand l'anglais est choisi. Un réglage sans entrée garde son
+ * texte français : mieux vaut un libellé dans l'autre langue qu'une clé brute.
+ */
+type Traduction = { displayName: string; description: string; options?: Record<string, string> };
+
+const ENGLISH: Record<string, Traduction> = {
+    langue: {
+        displayName: "Langue / Language",
+        description: "The language of Nebula's own text. Discord keeps its own, set in its own settings.",
+    },
+    langue_choisie: {
+        displayName: "Language already chosen",
+        description: "Remembers that the welcome screen asked. Set it back to false to see it again at the next launch.",
+    },
+    settings_theme: {
+        displayName: "Theme",
+        description: "Affects this window only.",
+        options: { system: "The system one", dark: "Dark", light: "Light" },
+    },
+    startup_animation: {
+        displayName: "Startup animation",
+        description: "Applies the next time Nebula starts.",
+        options: { modern: "Modern (default)", classic: "Discord's way" },
+    },
+    doh_provider: {
+        displayName: "Encrypted DNS (DNS over HTTPS)",
+        description: "Prefers an encrypted DNS, falling back to the system one. Applies the next time Nebula starts.",
+        options: {
+            off: "Off (system DNS)",
+            automatic: "Automatic",
+            cloudflare: "Cloudflare",
+            google: "Google",
+            quad9: "Quad9",
+        },
+    },
+    use_system_proxy: {
+        displayName: "Use the system proxy",
+        description: "Follows the system proxy settings. The proxy has to let discord.com through, otherwise Nebula can no longer reach its own local page. Applies at the next launch.",
+    },
+    guilds_per_shard: {
+        displayName: "Servers per shard",
+        description: "How many servers to aim for per shard. Used to work out the number of shards at the next connection.",
+    },
+    suppress_intent_warning: {
+        displayName: "Skip the MessageContent intent check",
+        description: "Allows connecting even when the MessageContent intent is not enabled.",
+    },
+    generate_fake_profile: {
+        displayName: "Fill in profiles locally",
+        description: "Adds made-up profile details inside Nebula. Real profiles do not change.",
+    },
+    auto_check_updates: {
+        displayName: "Check for updates automatically",
+        description: "Looks for a new version of Nebula at startup. Checking by hand stays possible.",
+    },
+    cache_assets: {
+        displayName: "Cache the assets",
+        description: "Kept for compatibility; no effect for now.",
+    },
+};
+
+/** Le réglage dans la langue demandée : libellé, explication et choix d'une liste. */
+export function localizedSetting (definition: SettingDefinition, langue: string) {
+    const english = langue === "en" ? ENGLISH[definition.key] : undefined;
+    return {
+        displayName: english?.displayName ?? definition.displayName,
+        description: english?.description ?? definition.description,
+        optionLabel: (value: string, fallback: string) => english?.options?.[value] ?? fallback,
+    };
+}
 
 type SettingValue<T extends SettingDefinition> = T extends { type: "boolean" }
     ? boolean

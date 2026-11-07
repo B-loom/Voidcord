@@ -2,18 +2,20 @@
 
 import { Field, Input, Select, Switch } from "@fluentui/react-components";
 
-import type { SettingDefinition } from "../../shared/Settings";
+import { localizedSetting, type SettingDefinition } from "../../shared/Settings";
 
 type Props = {
     definition: SettingDefinition;
+    langue: string;
     value: string | boolean;
     error?: string;
     disabled: boolean;
     onChange: (value: string | boolean) => void;
 };
 
-export function SettingsField ({ definition, value, error, disabled, onChange }: Props) {
-    const { key, displayName, description, type } = definition;
+export function SettingsField ({ definition, langue, value, error, disabled, onChange }: Props) {
+    const { key, type } = definition;
+    const { displayName, description, optionLabel } = localizedSetting(definition, langue);
     const labelId = `${key}-label`;
     const descriptionId = `${key}-description`;
     const accessibility = { "aria-labelledby": labelId, "aria-describedby": descriptionId };
@@ -39,7 +41,7 @@ export function SettingsField ({ definition, value, error, disabled, onChange }:
                 >
                     {definition.options.map(option => (
                         <option key={option.value} value={option.value}>
-                            {option.label}
+                            {optionLabel(option.value, option.label)}
                         </option>
                     ))}
                 </Select>

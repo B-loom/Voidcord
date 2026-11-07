@@ -12,7 +12,7 @@
 
 .vc-nebula-account-title {
     margin: 0;
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    color: var(--text-strong, #f2f3f5);
 }
 
 .vc-nebula-account-subtitle {
@@ -26,7 +26,7 @@
 
 .vc-nebula-account-label {
     margin: 16px 0 6px;
-    color: var(--header-secondary, var(--text-muted, #b5bac1));
+    color: var(--text-muted, #b5bac1);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -77,13 +77,13 @@
 }
 
 .vc-nebula-account-method:hover {
-    background: var(--background-modifier-hover, rgb(255 255 255 / 5%));
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    background: rgb(255 255 255 / 5%);
+    color: var(--text-strong, #f2f3f5);
 }
 
 .vc-nebula-account-method-current {
-    background: var(--brand-experiment-15a, rgb(88 101 242 / 15%));
-    color: var(--header-primary, var(--text-strong, #f2f3f5));
+    background: rgb(88 101 242 / 15%);
+    color: var(--text-strong, #f2f3f5);
 }
 
 .vc-nebula-account-done {
@@ -96,7 +96,7 @@
  */
 .vc-nebula-account-content input,
 .vc-nebula-account-content input::placeholder {
-    color: var(--text-normal, var(--text-default, #dbdee1)) !important;
+    color: var(--text-default, #dbdee1) !important;
 }
 
 .vc-nebula-account-content input::placeholder {
