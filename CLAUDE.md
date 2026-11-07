@@ -38,15 +38,32 @@ Trois textes ont une source unique, et des scripts les recopient :
 
 | Texte | Source | Recopié par |
 | --- | --- | --- |
-| Documentation dans l'app | `README.md` | `scripts/syncReadme.mjs` |
-| Pages du site | README, changelog, LICENSE, `package.json` | `scripts/buildSite.mjs` |
+| Documentation dans l'app, et `readme.md` | `readme.fr.md`, `readme.en.md` | `scripts/syncReadme.mjs` |
+| Pages du site | `readme.fr.md`, changelog, LICENSE, `package.json` | `scripts/buildSite.mjs` |
 | Code Vencord | `nebula/vencord/` | `scripts/applyNebulaOverlay.mjs` |
 
 L'ordre compte : `syncReadme` écrit dans `nebula/`, **puis** l'overlay recopie sur le
 clone. L'inverse annulerait la synchronisation en silence — c'est arrivé une fois.
 
-Ne jamais modifier à la main `docs/*.html` ni le `README` dans `docs.ts` : la modification
-serait écrasée au build suivant.
+Ne jamais modifier à la main `docs/*.html`, `readme.md`, ni le `README` dans `docs.ts` :
+la modification serait écrasée au build suivant. `readme.md` est la page d'accueil du
+dépôt, produite en réunissant l'anglais puis le français ; les originaux sont
+`readme.en.md` et `readme.fr.md`.
+
+## Deux langues
+
+Nebula se lit en français ou en anglais, et le français est l'original : c'est la langue
+du projet, et la traduction vient après. Le choix vit dans les réglages, et les textes
+sont écrits côte à côte plutôt que derrière des clés — `t("Partager", "Share")` — pour
+qu'une traduction oubliée se voie à la lecture.
+
+Les deux longs textes, la documentation et le changelog, ne tiennent pas dans un appel de
+fonction : ils vivent dans `docs.ts` pour le français et `docs.en.ts` pour l'anglais, et
+`NebulaTab` choisit selon `enAnglais()`. **Ajouter une entrée au changelog, c'est l'écrire
+dans les deux fichiers.**
+
+La langue est lue une seule fois, au chargement de la page : la changer en cours de route
+ne touche pas les écrans déjà affichés. La page des réglages propose donc de recharger.
 
 ## Les réglages ne sont plus un fichier à éditer
 

@@ -1,7 +1,7 @@
 /* Copyright Elysia © 2025. All rights reserved */
 
 /*
- * The site is generated from the project itself: the documentation page from README.md,
+ * The site is generated from the project itself: the documentation page from readme.fr.md,
  * the changelog from the one embedded in the client, the licence from LICENSE, and the
  * version from package.json. Nothing is written twice, so nothing can drift.
  */
@@ -14,7 +14,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.join(root, "docs");
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
-const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
+const readme = fs.readFileSync(path.join(root, "readme.fr.md"), "utf8");
 const licence = fs.readFileSync(path.join(root, "LICENSE"), "utf8");
 
 const docsSource = fs.readFileSync(
