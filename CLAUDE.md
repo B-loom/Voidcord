@@ -39,13 +39,16 @@ Trois textes ont une source unique, et des scripts les recopient :
 | Texte | Source | Recopié par |
 | --- | --- | --- |
 | Documentation dans l'app, et `readme.md` | `readme.fr.md`, `readme.en.md` | `scripts/syncReadme.mjs` |
-| Pages du site | `readme.fr.md`, changelog, LICENSE, `package.json` | `scripts/buildSite.mjs` |
+| Pages du site, en deux langues | les deux readme, les deux changelogs, LICENSE, `package.json` | `scripts/buildSite.mjs` |
 | Code Vencord | `nebula/vencord/` | `scripts/applyNebulaOverlay.mjs` |
 
 L'ordre compte : `syncReadme` écrit dans `nebula/`, **puis** l'overlay recopie sur le
 clone. L'inverse annulerait la synchronisation en silence — c'est arrivé une fois.
 
-Ne jamais modifier à la main `docs/*.html`, `readme.md`, ni le `README` dans `docs.ts` :
+Le site paraît en deux langues : l'anglais à la racine de `docs/`, le français sous
+`docs/fr/`, chaque page portant le lien vers son équivalent dans l'autre langue.
+
+Ne jamais modifier à la main `docs/**.html`, `readme.md`, ni le `README` dans `docs.ts` :
 la modification serait écrasée au build suivant. `readme.md` est la page d'accueil du
 dépôt, produite en réunissant l'anglais puis le français ; les originaux sont
 `readme.en.md` et `readme.fr.md`.
