@@ -147,7 +147,7 @@ Nebula en est une modification personnelle, écrite avec Claude.
 
 export const CHANGELOG = `# Nouveautés
 
-## v1.2.9 — Les comptes, le partage et les couleurs
+## v1.2.9 — Les comptes, les réglages et la langue
 
 ### Recharger ne déconnecte plus
 - **Ctrl+R renvoyait à l'écran de choix des comptes.** Au rechargement, Discord ouvre la

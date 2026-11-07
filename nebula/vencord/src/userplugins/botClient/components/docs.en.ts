@@ -142,7 +142,7 @@ Nebula is a personal modification of it, written with Claude.
 
 export const CHANGELOG_EN = `# What's new
 
-## v1.2.9 — Accounts, sharing and colours
+## v1.2.9 — Accounts, settings and language
 
 ### Reloading no longer signs you out
 - **Ctrl+R sent you back to the account picker.** On reload, Discord opens the gateway and
