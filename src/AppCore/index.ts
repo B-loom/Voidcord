@@ -38,7 +38,7 @@ import { askLanguage } from "./Windows/LanguageWindow";
 import { StartupWindow } from "./Windows/StartupWindow";
 
 /**
- * Discord asks its own CDN for the system user's pictures, Nebula's badge and the two
+ * Discord asks its own CDN for the system user's pictures, Voidcord's badge and the two
  * emojis used by the welcome buttons. None of them exist there, so each request is
  * answered with a file shipped alongside the app.
  */
@@ -50,7 +50,7 @@ export type UpdateState = {
 };
 
 function brandingFileFor (url: string) {
-    if (url.includes("/badge-icons/")) return "nebula-badge.png";
+    if (url.includes("/badge-icons/")) return "voidcord-badge.png";
     if (url.includes("/avatars/")) return "sakura-avatar.webp";
     if (url.includes("/banners/")) return "sakura-banner.webp";
     if (url.includes(`/emojis/${Constants.DiscordEmojiId}`)) return "discord-logo.svg";
@@ -61,7 +61,7 @@ function brandingFileFor (url: string) {
 
 /**
  * An invite link opened inside the client lands on discord.com's own invite page, the one
- * that asks whether to open the desktop app — a dead end here, since Nebula *is* the
+ * that asks whether to open the desktop app — a dead end here, since Voidcord *is* the
  * application. The code is taken out of the link and handed to the client, which shows
  * the invite the way it does for a link posted in a message.
  */
@@ -354,7 +354,7 @@ export class DiscordBotClient extends EventEmitter {
                     });
                     await this.createWindow();
                     /*
-                     * Les versions viennent du dépôt de Nebula, donc en chercher une est
+                     * Les versions viennent du dépôt de Voidcord, donc en chercher une est
                      * sans danger. L'attente laisse la fenêtre s'ouvrir : la notification
                      * est pour la personne qui la lit, pas pour un client qui démarre.
                      */
@@ -405,7 +405,7 @@ export class DiscordBotClient extends EventEmitter {
                     "https://*.stripe.com/*",
                     `https://cdn.discordapp.com/avatars/${Constants.UserIdDefault}/*`,
                     `https://cdn.discordapp.com/banners/${Constants.UserIdDefault}/*`,
-                    "https://cdn.discordapp.com/badge-icons/nebulacreator*",
+                    "https://cdn.discordapp.com/badge-icons/voidcordcreator*",
                     `https://cdn.discordapp.com/emojis/${Constants.DiscordEmojiId}*`,
                     `https://cdn.discordapp.com/emojis/${Constants.GithubEmojiId}*`,
                     `https://cdn.discordapp.com/emojis/${Constants.SiteEmojiId}*`,
@@ -508,11 +508,11 @@ export class DiscordBotClient extends EventEmitter {
         const contents = this.discordWebContents;
         contents.on("did-fail-load", (_event, code, _description, _url, isMainFrame) => {
             if (isMainFrame && code !== -3 && this.startupWindow) {
-                this.startupWindow.fail("Impossible de charger Nebula. Vérifie ta connexion et réessaie.");
+                this.startupWindow.fail("Impossible de charger Voidcord. Vérifie ta connexion et réessaie.");
             }
         });
         contents.on("render-process-gone", () => {
-            if (this.startupWindow) this.startupWindow.fail("Nebula s’est arrêtée pendant le démarrage. Réessaie.");
+            if (this.startupWindow) this.startupWindow.fail("Voidcord s’est arrêtée pendant le démarrage. Réessaie.");
         });
         await this.sessionPatch();
 
@@ -550,7 +550,7 @@ export class DiscordBotClient extends EventEmitter {
             /*
              * Une invitation ouverte sur place mène à la page « Discord App Detected »,
              * qui propose d'ouvrir une application de bureau : un cul-de-sac, puisque
-             * Nebula *est* l'application. Le code est repris du lien et rendu au client,
+             * Voidcord *est* l'application. Le code est repris du lien et rendu au client,
              * qui montre l'invitation comme pour un lien reçu dans un message. Le même
              * détour existait déjà pour les liens ouverts dans une nouvelle fenêtre.
              */
@@ -693,7 +693,7 @@ export class DiscordBotClient extends EventEmitter {
             () => this.quit(),
             this.config.config.startup_animation,
         );
-        this.startupWindow.fail("Nebula n’a pas pu démarrer. Réessaie.");
+        this.startupWindow.fail("Voidcord n’a pas pu démarrer. Réessaie.");
     }
     showNotification (options: NotificationConstructorOptions, callback?: () => unknown) {
         const notif = new Notification(options);
@@ -709,7 +709,7 @@ export class DiscordBotClient extends EventEmitter {
         notif.show();
     }
     /**
-     * Where the update stands, so the Nebula tab can show it rather than leaving the
+     * Where the update stands, so the Voidcord tab can show it rather than leaving the
      * person guessing. Every window is told, since each one has its own settings page.
      */
     updateState: UpdateState = { state: "idle" };
@@ -734,7 +734,7 @@ export class DiscordBotClient extends EventEmitter {
             }
             this.setUpdateState({
                 state: "error",
-                message: "Les mises à jour ne fonctionnent qu'une fois Nebula installée.",
+                message: "Les mises à jour ne fonctionnent qu'une fois Voidcord installée.",
             });
             return Promise.resolve(false);
         }
@@ -904,14 +904,14 @@ export class DiscordBotClient extends EventEmitter {
             const where = details?.sourceId ? ` (${details.sourceId}:${details.lineNumber})` : "";
             const grave = level === "error" || level === "warning" || level === 3 || level === 2;
             /*
-             * Le journal ne recevait que les erreurs du client. Les messages que Nebula
+             * Le journal ne recevait que les erreurs du client. Les messages que Voidcord
              * écrit elle-même pour expliquer ce qu'elle fait — reconnexion à un compte,
              * fermeture de la passerelle, qualité du partage — n'y arrivaient donc jamais,
              * alors que ce sont eux qu'on vient y chercher. Ils passent maintenant ; le
              * bavardage de Discord, lui, reste dehors.
              */
-            const deNebula = /Nebula/i.test(message);
-            if (!grave && !deNebula) return;
+            const deVoidcord = /Voidcord/i.test(message);
+            if (!grave && !deVoidcord) return;
             if (grave) rendererLogger.error(`${message}${where}`);
             else rendererLogger.info(message);
         });
@@ -935,7 +935,7 @@ export class DiscordBotClient extends EventEmitter {
                     "https://*.stripe.com/*",
                     `https://cdn.discordapp.com/avatars/${Constants.UserIdDefault}/*`,
                     `https://cdn.discordapp.com/banners/${Constants.UserIdDefault}/*`,
-                    "https://cdn.discordapp.com/badge-icons/nebulacreator*",
+                    "https://cdn.discordapp.com/badge-icons/voidcordcreator*",
                     `https://cdn.discordapp.com/emojis/${Constants.DiscordEmojiId}*`,
                     `https://cdn.discordapp.com/emojis/${Constants.GithubEmojiId}*`,
                     `https://cdn.discordapp.com/emojis/${Constants.SiteEmojiId}*`,
@@ -1004,7 +1004,7 @@ export class DiscordBotClient extends EventEmitter {
             existing.focus();
             return true;
         }
-        const accountSession = session.fromPartition(`persist:nebula_account_${accountId}`);
+        const accountSession = session.fromPartition(`persist:voidcord_account_${accountId}`);
         await this.prepareAccountSession(accountSession);
         const primaryDisplay = screen.getPrimaryDisplay();
         const { width, height } = primaryDisplay.workAreaSize;

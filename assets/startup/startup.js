@@ -14,7 +14,7 @@ const animation = skip && window.createStartupAnimation(
 function render(state) {
     feedback.hidden = !!animation && state.phase !== "error";
     status.textContent = state.phase === "error" ? state.message || "Démarrage impossible."
-        : animation ? "" : state.phase === "loading" ? "Chargement de Nebula…" : "Démarrage…";
+        : animation ? "" : state.phase === "loading" ? "Chargement de Voidcord…" : "Démarrage…";
     actions.hidden = state.phase !== "error";
     document.body.classList.toggle("failed", state.phase === "error");
     if (state.phase === "ready") animation?.ready();

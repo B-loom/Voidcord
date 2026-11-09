@@ -42,7 +42,7 @@ needed when changing the banner or vectorizer.
 Optional upstream source comparison accepts a separate checkout:
 `node tests/startup-source-parity.cjs /path/to/codex-startup-animation`.
 
-The banner holds the full supplied 1920x1080 image. Nebula ships no artwork credit
+The banner holds the full supplied 1920x1080 image. Voidcord ships no artwork credit
 button: the picture carries no attribution, so none is claimed.
 The opening avatar retains the app's existing icon.
 Normal startup shows only the app name and the Skip/Escape control.

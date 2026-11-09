@@ -199,7 +199,7 @@ export class GameDetection {
     }
 
     /**
-     * Listing the processes is the only part of Nebula that costs anything while the user
+     * Listing the processes is the only part of Voidcord that costs anything while the user
      * does nothing, so it runs as rarely as it can: once a minute, and not at all while no
      * client window is on screen, since nobody can see the activity it would publish.
      */

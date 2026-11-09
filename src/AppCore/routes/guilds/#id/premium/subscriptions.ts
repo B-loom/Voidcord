@@ -19,7 +19,7 @@ function createFakeBoost (guildId: string) {
         user: {
             id: botId,
             username: "elysia",
-            global_name: "Nebula",
+            global_name: "Voidcord",
             avatar: null,
             avatar_decoration_data: null,
             collectibles: null,

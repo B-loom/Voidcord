@@ -1,5 +1,5 @@
 /*
- * Nebula ships its own message editor in place of the bundled Discohook build, so this
+ * Voidcord ships its own message editor in place of the bundled Discohook build, so this
  * fixture no longer drives Discohook's own API and buttons. What it still checks is what
  * matters here: the editor is served over the private scheme, cannot reach the network or
  * Node, cannot be navigated away from, and the init/submit MessagePort round-trip works.

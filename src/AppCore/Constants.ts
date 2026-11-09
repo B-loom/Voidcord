@@ -5,7 +5,7 @@ import path from "path";
 import UserPatch from "src/AppUtils/UserPatch";
 
 const GithubUserName = "B-loom";
-const GithubRepoName = "discord-bot-client-Nebula";
+const GithubRepoName = "Voidcord";
 
 export default class Constants extends null {
     static BlacklistRoutes = [
@@ -34,8 +34,8 @@ export default class Constants extends null {
     /** Blocked even outside the API: these are pages, not bot endpoints */
     static BlacklistWebRoutes = ["cdn-cgi/challenge-platform"];
     static LatestStorageUpdate = 1735000000000;
-    static AppName = "Nebula";
-    static AppID = "Nebula";
+    static AppName = "Voidcord";
+    static AppID = "Voidcord";
     static iconPath = path.join(app.getAppPath(), "assets", "icon.png");
     static icon16 = nativeImage.createFromPath(Constants.iconPath).resize({ width: 16 });
     static icon128 = nativeImage.createFromPath(Constants.iconPath).resize({ width: 128 });
@@ -73,14 +73,14 @@ export default class Constants extends null {
     static AccountLoginHTMLPath = path.join(app.getAppPath(), "assets", "account", "index.html");
     static CaptchaHTMLPath = path.join(app.getAppPath(), "assets", "account", "captcha.html");
     static BrandingPath = path.join(app.getAppPath(), "assets", "branding");
-    /** Nebula's own message editor, in place of the bundled Discohook build */
-    static EditorHTMLFolderPath = path.join(app.getAppPath(), "assets", "nebula-editor");
+    /** Voidcord's own message editor, in place of the bundled Discohook build */
+    static EditorHTMLFolderPath = path.join(app.getAppPath(), "assets", "voidcord-editor");
     static DiscordGuildExperimentsPath = path.join(app.getAppPath(), "assets", "snapshot", "guild_experiments.json");
     static DiscordUserExperimentsPath = path.join(app.getAppPath(), "assets", "snapshot", "user_experiments.json");
     static DiscordApexExperimentsPath = path.join(app.getAppPath(), "assets", "snapshot", "apex_experiments.json");
     static UserDefaultPatch = UserPatch["1565153191526400000"];
     static ChannelIdDefault = "1000000000000000000";
-    /** Le compte système de Nebula. Son flocon date du 29 octobre 2026, jour de la
+    /** Le compte système de Voidcord. Son flocon date du 29 octobre 2026, jour de la
      * première version publiée : c'est la date de création qu'affiche son profil. */
     static UserIdDefault = "1565153191526400000";
     static CustomDiscordDomain = "discord.com";
@@ -94,20 +94,20 @@ export default class Constants extends null {
      * never reaches the app. This address means nothing to Discord, which therefore hands
      * it over as an ordinary external link: that is where the invite gets copied.
      */
-    static CopyInviteUrl = "https://nebula.invalid/copier-invitation";
+    static CopyInviteUrl = "https://voidcord.invalid/copier-invitation";
     /** The project page, linked from the welcome message */
-    static ProjectSiteUrl = "https://b-loom.github.io/discord-bot-client-Nebula/";
+    static ProjectSiteUrl = "https://b-loom.github.io/Voidcord/";
     /** This fork's own repository, linked from the welcome message */
-    static ProjectRepoUrl = "https://github.com/B-loom/discord-bot-client-Nebula";
+    static ProjectRepoUrl = "https://github.com/B-loom/Voidcord";
     /*
      * Buttons may only carry an emoji Discord knows, so two ids are reserved here and
      * their pictures are redirected to files shipped with the app, the same way the
-     * system user's avatar and Nebula's badge already are.
+     * system user's avatar and Voidcord's badge already are.
      */
     static DiscordEmojiId = "1000000000000000001";
     static GithubEmojiId = "1000000000000000002";
     static SiteEmojiId = "1000000000000000003";
-    static DefaultBio = "<a:emoji_1:1399479404706660373> Nebula on top";
+    static DefaultBio = "<a:emoji_1:1399479404706660373> Voidcord on top";
     static VerboseAPIServerLogging = false; // Journaliser chaque requête coûte du processeur et des écritures disque
     // Database
     static DirectMessages = {
@@ -129,7 +129,7 @@ export default class Constants extends null {
         "WinRetrieveSuggestionsOnlyOnDemand",
         "HardwareMediaKeyHandling",
         "MediaSessionService",
-        // Chromium services Nebula never uses, each of which costs a background task
+        // Chromium services Voidcord never uses, each of which costs a background task
         "MediaRouter", // découverte Cast sur le réseau local
         "OptimizationHints", // téléchargement périodique de règles Google
         "Translate",

@@ -143,7 +143,7 @@ app.whenReady().then(async () => {
     assert.equal(startup.window.getBackgroundColor().toLowerCase(), '#282b30');
     assert.equal(await startup.window.webContents.executeJavaScript('document.querySelector("img").getAttribute("src") === "waiting.gif" && !document.querySelector("canvas")'), true);
     startup.loading();
-    await waitFor(() => startup.window.webContents.executeJavaScript('document.getElementById("status").textContent === "Chargement de Nebula…"'));
+    await waitFor(() => startup.window.webContents.executeJavaScript('document.getElementById("status").textContent === "Chargement de Voidcord…"'));
     fs.writeFileSync(path.join(path.dirname(loadingOutput), 'startup-classic.png'), (await startup.window.webContents.capturePage()).toPNG());
     assert.equal(await startup.waitForAnimation(), true, 'Classic GIF does not wait for the cinematic sequence');
     startup.fail('Classic startup failed');

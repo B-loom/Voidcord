@@ -68,7 +68,7 @@ const output = path.join(root, 'plans', '261001-settings');
         check('Local renderer runs sandboxed without Node access');
         const snapshot = await evaluate('window.settingsAPI.get()');
         assert.deepEqual(snapshot, config.snapshot());
-        // Nebula garde Cloudflare par défaut, comme avant la fenêtre de réglages
+        // Voidcord garde Cloudflare par défaut, comme avant la fenêtre de réglages
         assert.equal(snapshot.settings.doh_provider, 'cloudflare');
         assert.equal(snapshot.settings.auto_check_updates, true);
         assert.equal(snapshot.settings.startup_animation, 'modern');

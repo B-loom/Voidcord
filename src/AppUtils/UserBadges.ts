@@ -1,11 +1,11 @@
 /* Copyright Elysia © 2025. All rights reserved */
 
 export class BadgesBasedUserFlags extends null {
-    /** Nebula's own badge. Its icon is redirected to a file shipped with the app. */
-    static NebulaCreator = {
-        id: "nebula_creator",
-        description: "Creator Nebula",
-        icon: "nebulacreator00000000000000000000",
+    /** Voidcord's own badge. Its icon is redirected to a file shipped with the app. */
+    static VoidcordCreator = {
+        id: "voidcord_creator",
+        description: "Creator Voidcord",
+        icon: "voidcordcreator00000000000000000000",
         link: "https://discord.com/users/1391459588930404372",
     };
     static Staff = {

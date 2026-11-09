@@ -21,9 +21,9 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 /*
  * La documentation est écrite dans les sources versionnées, pas dans le clone : le
- * calque Nebula est recopié sur le clone juste après, et y remettrait le texte d'avant.
+ * calque Voidcord est recopié sur le clone juste après, et y remettrait le texte d'avant.
  */
-const composants = "nebula/vencord/src/userplugins/botClient/components";
+const composants = "voidcord/vencord/src/userplugins/botClient/components";
 
 const FRANCAIS = path.join(root, "readme.fr.md");
 const ANGLAIS = path.join(root, "readme.en.md");

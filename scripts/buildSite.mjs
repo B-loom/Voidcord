@@ -24,7 +24,7 @@ const licence = fs.readFileSync(path.join(root, "LICENSE"), "utf8");
 /** Le changelog vit dans un littéral gabarit : on le relit en défaisant les échappements */
 function changelogDe (fichier, nom) {
     const source = fs.readFileSync(
-        path.join(root, "nebula/vencord/src/userplugins/botClient/components", fichier),
+        path.join(root, "voidcord/vencord/src/userplugins/botClient/components", fichier),
         "utf8",
     );
     const trouve = new RegExp(`export const ${nom} = \`([\\s\\S]*?)\`;`).exec(source);
@@ -35,9 +35,9 @@ function changelogDe (fichier, nom) {
         .split("\\\\").join("\\");
 }
 
-const REPO = "https://github.com/B-loom/discord-bot-client-Nebula";
+const REPO = "https://github.com/B-loom/Voidcord";
 const INVITE = "https://discord.gg/TNTYSmy4mX";
-const DOWNLOAD = `${REPO}/releases/latest/download/Nebula-win-x64.exe`;
+const DOWNLOAD = `${REPO}/releases/latest/download/Voidcord-win-x64.exe`;
 const ORIGINE = "https://github.com/aiko-chan-ai/DiscordBotClient";
 
 const escape = (text) =>
@@ -135,10 +135,10 @@ const LANGUES = [
             { fichier: "licence.html", libelle: "Licence" },
         ],
         titres: {
-            index: "Nebula",
-            documentation: "Documentation · Nebula",
-            changelog: "What's new · Nebula",
-            licence: "Licence · Nebula",
+            index: "Voidcord",
+            documentation: "Documentation · Voidcord",
+            changelog: "What's new · Voidcord",
+            licence: "Licence · Voidcord",
         },
         piedDePage: ["Source code", "All releases", "Discord server"],
         accroche: `Your Discord accounts and your bots in one application.
@@ -149,22 +149,22 @@ const LANGUES = [
         version: "Version",
         voirNouveautes: "See what's new",
         note: "Windows 64-bit · installer · automatic updates",
-        titreFonctions: "What Nebula does",
+        titreFonctions: "What Voidcord does",
         fonctions: [
             ["Accounts and bots together", "Sign in by email, by account token or by bot token. Captcha and two-factor handled."],
             ["As many accounts as you like", "Each in its own window and its own session, sorted between users and bots."],
             ["Game detection", "The game you are playing shows on your profile, without the official client."],
             ["Message editor", "Embeds, buttons, files and an emoji catalogue, for bots."],
             ["In French, or in English", "The interface, the plugins and the error messages follow the language you choose."],
-            ["Updates", "Nebula tells you when a version is out, downloads it and installs it on restart."],
+            ["Updates", "Voidcord tells you when a version is out, downloads it and installs it on restart."],
         ],
         titreInstaller: "Installing",
         etapes: [
-            "Download <strong>Nebula-win-x64.exe</strong> with the button above.",
+            "Download <strong>Voidcord-win-x64.exe</strong> with the button above.",
             "Run it. Windows will show a warning, the application not being signed with a paid certificate: go through <strong>More info</strong>, then <strong>Run anyway</strong>.",
             "Choose the install folder. That's all.",
         ],
-        titreAvertissements: "Read this before using Nebula",
+        titreAvertissements: "Read this before using Voidcord",
         avertissements: [
             [
                 "A third-party client goes against Discord's terms of service.",
@@ -175,7 +175,7 @@ const LANGUES = [
                 "Not for a banned account, not for a deleted bot, not for lost data, not for anything else. You use it at your own risk.",
             ],
             [
-                "Nebula is not an original project.",
+                "Voidcord is not an original project.",
                 `It is a modified version of <a href="${ORIGINE}">aiko-chan-ai/DiscordBotClient</a>, which deserves all the credit for the underlying work. When Discord changes and the client breaks, the fix is awaited from the original project before being carried over here.`,
             ],
             [
@@ -189,7 +189,7 @@ const LANGUES = [
         with a bot: the two do not follow the same path through the application, and the
         answer depends on it.`,
         licenceTitre: "Licence",
-        licenceTexte: "Nebula is published under the <strong>GNU General Public License v3</strong>, like the project it derives from.",
+        licenceTexte: "Voidcord is published under the <strong>GNU General Public License v3</strong>, like the project it derives from.",
     },
     {
         code: "fr",
@@ -206,10 +206,10 @@ const LANGUES = [
             { fichier: "licence.html", libelle: "Licence" },
         ],
         titres: {
-            index: "Nebula",
-            documentation: "Documentation · Nebula",
-            changelog: "Nouveautés · Nebula",
-            licence: "Licence · Nebula",
+            index: "Voidcord",
+            documentation: "Documentation · Voidcord",
+            changelog: "Nouveautés · Voidcord",
+            licence: "Licence · Voidcord",
         },
         piedDePage: ["Code source", "Toutes les versions", "Serveur Discord"],
         accroche: `Tes comptes Discord et tes bots dans une seule application.
@@ -220,22 +220,22 @@ const LANGUES = [
         version: "Version",
         voirNouveautes: "Voir les nouveautés",
         note: "Windows 64 bits · installateur · mises à jour automatiques",
-        titreFonctions: "Ce que fait Nebula",
+        titreFonctions: "Ce que fait Voidcord",
         fonctions: [
             ["Comptes et bots ensemble", "Connexion par e-mail, par token de compte ou par token de bot. Captcha et double authentification gérés."],
             ["Autant de comptes que voulu", "Chacun dans sa fenêtre et sa session, rangés entre utilisateurs et bots."],
             ["Détection des jeux", "Le jeu en cours apparaît sur ton profil, sans le client officiel."],
             ["Éditeur de messages", "Embeds, boutons, fichiers et catalogue d'émojis, pour les bots."],
             ["En français, ou en anglais", "L'interface, les plugins et les messages d'erreur suivent la langue choisie."],
-            ["Mises à jour", "Nebula prévient quand une version paraît, la télécharge et l'installe au redémarrage."],
+            ["Mises à jour", "Voidcord prévient quand une version paraît, la télécharge et l'installe au redémarrage."],
         ],
         titreInstaller: "Installer",
         etapes: [
-            "Télécharge <strong>Nebula-win-x64.exe</strong> avec le bouton plus haut.",
+            "Télécharge <strong>Voidcord-win-x64.exe</strong> avec le bouton plus haut.",
             "Lance-le. Windows affichera un avertissement, l'application n'étant pas signée par un certificat payant : passe par <strong>Informations complémentaires</strong> puis <strong>Exécuter quand même</strong>.",
             "Choisis le dossier d'installation. C'est tout.",
         ],
-        titreAvertissements: "À lire avant d'utiliser Nebula",
+        titreAvertissements: "À lire avant d'utiliser Voidcord",
         avertissements: [
             [
                 "Un client tiers est contraire aux conditions d'utilisation de Discord.",
@@ -246,7 +246,7 @@ const LANGUES = [
                 "Ni pour un compte banni, ni pour un bot supprimé, ni pour une perte de données, ni pour quoi que ce soit d'autre. Tu l'utilises à tes risques.",
             ],
             [
-                "Nebula n'est pas un projet original.",
+                "Voidcord n'est pas un projet original.",
                 `C'est une version modifiée de <a href="${ORIGINE}">aiko-chan-ai/DiscordBotClient</a>, à qui revient tout le travail de fond. Quand Discord change et que le client casse, la correction est attendue du projet d'origine avant d'être reprise ici.`,
             ],
             [
@@ -260,7 +260,7 @@ const LANGUES = [
         bot&nbsp;: les deux ne suivent pas le même chemin dans l'application, et la réponse
         en dépend.`,
         licenceTitre: "Licence",
-        licenceTexte: "Nebula est publiée sous la <strong>GNU General Public License v3</strong>, comme le projet dont elle dérive.",
+        licenceTexte: "Voidcord est publiée sous la <strong>GNU General Public License v3</strong>, comme le projet dont elle dérive.",
     },
 ];
 
@@ -302,7 +302,7 @@ function page (langue, { fichier, titre, corps, large = false }) {
 <nav class="topbar">
     <a class="brand" href="index.html">
         <img src="${racine}icon.png" alt="">
-        <span>Nebula</span>
+        <span>Voidcord</span>
         <span class="version">v${pkg.version}</span>
     </a>
     <div class="nav-links">${nav}</div>
@@ -333,7 +333,7 @@ function accueil (langue, changelog) {
     return `
 <header class="hero">
     <img class="hero-icon" src="${langue.dossier ? "../" : ""}icon.png" alt="">
-    <h1>Nebula</h1>
+    <h1>Voidcord</h1>
     <p class="tagline">
         ${langue.accroche}
     </p>

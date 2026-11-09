@@ -12,7 +12,7 @@ export type Langue = Settings["langue"];
  *
  * Il passe avant l'écran de démarrage, parce que celui-ci parle déjà. La promesse ne se
  * résout qu'une fois la réponse donnée — ou la fenêtre fermée, auquel cas le français
- * reste, puisque c'est la langue par défaut de Nebula.
+ * reste, puisque c'est la langue par défaut de Voidcord.
  */
 export function askLanguage (): Promise<Langue> {
     return new Promise(resolve => {
@@ -25,7 +25,7 @@ export function askLanguage (): Promise<Langue> {
             frame: false,
             show: false,
             backgroundColor: "#11111b",
-            title: "Nebula",
+            title: "Voidcord",
             autoHideMenuBar: true,
             webPreferences: {
                 preload: path.join(__dirname, "..", "Preloads", "LanguagePreload.js"),

@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Documentation · Nebula</title>
+<title>Documentation · Voidcord</title>
 <meta name="description" content="Un client Discord de bureau qui réunit tes comptes Discord et tes bots dans une seule application.">
 <link rel="icon" href="../icon.png">
 <link rel="stylesheet" href="../style.css">
 <link rel="alternate" hreflang="en" href="../documentation.html">
 <link rel="alternate" hreflang="fr" href="documentation.html">
-<meta property="og:title" content="Documentation · Nebula">
+<meta property="og:title" content="Documentation · Voidcord">
 <meta property="og:description" content="Tes comptes Discord et tes bots dans une seule application.">
 <meta property="og:image" content="../icon.png">
 </head>
@@ -18,32 +18,32 @@
 <nav class="topbar">
     <a class="brand" href="index.html">
         <img src="../icon.png" alt="">
-        <span>Nebula</span>
-        <span class="version">v1.2.9</span>
+        <span>Voidcord</span>
+        <span class="version">v1.3.1</span>
     </a>
     <div class="nav-links"><a class="nav-link" href="index.html">Accueil</a><a class="nav-link current" href="documentation.html">Documentation</a><a class="nav-link" href="changelog.html">Nouveautés</a><a class="nav-link" href="licence.html">Licence</a></div>
     <a class="lang" href="../documentation.html" hreflang="en" lang="en">English</a>
 </nav>
 
 <main class="wrap">
-<article class="prose"><h1>Nebula</h1>
-<p>Nebula est un client Discord de bureau qui réunit <strong>tes comptes Discord</strong> et <strong>tes bots</strong></p>
+<article class="prose"><h1>Voidcord</h1>
+<p>Voidcord est un client Discord de bureau qui réunit <strong>tes comptes Discord</strong> et <strong>tes bots</strong></p>
 <p>dans une seule application : une fenêtre par compte, le même client pour tous.</p>
 <hr>
-<h2>⚠️ À lire avant d'utiliser Nebula</h2>
+<h2>⚠️ À lire avant d'utiliser Voidcord</h2>
 <blockquote><p><strong>Ce projet a été écrit avec <a href="https://claude.ai">Claude</a>, l'assistant d'Anthropic.</strong></p></blockquote>
-<blockquote><p><strong>Je ne suis responsable de rien.</strong> Ni d'un compte désactivé ou banni, ni d'un bot</p><p>supprimé, ni d'une perte de données, ni d'un plantage de ton ordinateur, ni de quoi que</p><p>ce soit d'autre qui arriverait en utilisant Nebula. Tu l'utilises à tes risques.</p></blockquote>
+<blockquote><p><strong>Je ne suis responsable de rien.</strong> Ni d'un compte désactivé ou banni, ni d'un bot</p><p>supprimé, ni d'une perte de données, ni d'un plantage de ton ordinateur, ni de quoi que</p><p>ce soit d'autre qui arriverait en utilisant Voidcord. Tu l'utilises à tes risques.</p></blockquote>
 <blockquote><p><strong>Un client tiers est contraire aux conditions d'utilisation de Discord.</strong> Se connecter</p><p>avec un compte utilisateur depuis autre chose que le client officiel peut entraîner la</p><p>désactivation de ce compte. Les bots, eux, utilisent l'API officielle et ne posent pas</p><p>ce problème.</p></blockquote>
-<blockquote><p><strong>Nebula n'est pas un projet original.</strong> C'est une version modifiée de</p><p><strong><a href="https://github.com/aiko-chan-ai/DiscordBotClient">aiko-chan-ai/DiscordBotClient</a></strong>,</p><p>à qui revient tout le travail de fond. Merci à l'auteur.</p></blockquote>
+<blockquote><p><strong>Voidcord n'est pas un projet original.</strong> C'est une version modifiée de</p><p><strong><a href="https://github.com/aiko-chan-ai/DiscordBotClient">aiko-chan-ai/DiscordBotClient</a></strong>,</p><p>à qui revient tout le travail de fond. Merci à l'auteur.</p></blockquote>
 <blockquote><p><strong>Les mises à jour de Discord ne viennent pas de moi.</strong> Quand Discord change et que le</p><p>client casse, j'attends que <strong>aiko-chan-ai</strong> publie une mise à jour du projet d'origine,</p><p>puis je la reprends ici. Il peut donc s'écouler du temps entre le moment où quelque</p><p>chose casse et le moment où c'est réparé.</p></blockquote>
 <p><code>requirement</code> installs the root lockfile, checks out the pinned Vencord, BotClient plugin, and Discohook revisions from <code>scripts/build-dependencies.json</code>. Existing checkouts are never reset; a mismatched revision stops with an error so local work is not lost. <code>build</code> packages locally without publishing. Maintainers should use the <a href="docs/release-process.md">release process</a> for tags and artifacts. After building, run <code>npm run typecheck</code> for TypeScript and <code>npm test</code> on Windows for the Electron integration suite. Use <code>npm start</code> to launch the app.</p>
 <hr>
 <h2>Le site</h2>
-<p><strong>https://b-loom.github.io/discord-bot-client-Nebula/</strong></p>
+<p><strong>https://b-loom.github.io/Voidcord/</strong></p>
 <p>Téléchargement, documentation, nouveautés et licence, au même endroit.</p>
 <h2>Installer</h2>
 <p>Télécharge l'installateur de la dernière version depuis le site ou depuis la page</p>
-<p><a href="https://github.com/B-loom/discord-bot-client-Nebula/releases">Releases</a>, puis lance-le.</p>
+<p><a href="https://github.com/B-loom/Voidcord/releases">Releases</a>, puis lance-le.</p>
 <p>Il te laisse choisir le dossier d'installation et crée les raccourcis habituels.</p>
 <p>Windows affichera probablement un avertissement au lancement : l'application n'est pas</p>
 <p>signée par un certificat payant. Passe par « Informations complémentaires » puis</p>
@@ -51,12 +51,12 @@
 <h2>Se connecter</h2>
 <h3>Avec un compte Discord</h3>
 <p>Ouvre la fenêtre de connexion — depuis le lien sous le bouton de connexion, depuis</p>
-<p>« Ajouter un compte », ou depuis l'icône de Nebula dans la barre des tâches. Saisis ton</p>
-<p>adresse e-mail et ton mot de passe ; Nebula s'occupe du reste :</p>
+<p>« Ajouter un compte », ou depuis l'icône de Voidcord dans la barre des tâches. Saisis ton</p>
+<p>adresse e-mail et ton mot de passe ; Voidcord s'occupe du reste :</p>
 <ul><li>le captcha, dans une fenêtre dédiée ;</li><li>la double authentification, par application, par SMS ou par code de secours.</li></ul>
 <p>Tu peux aussi coller directement un token de compte si tu en as déjà un.</p>
 <p>Seul le token est conservé, dans le fichier <code>accounts.json</code> du dossier de données de</p>
-<p>Nebula, sur cet ordinateur. <strong>Ton mot de passe n'est jamais enregistré</strong> et ne quitte pas</p>
+<p>Voidcord, sur cet ordinateur. <strong>Ton mot de passe n'est jamais enregistré</strong> et ne quitte pas</p>
 <p>la fenêtre de connexion.</p>
 <h3>Avec un bot</h3>
 <p>Colle le token du bot sur l'écran de connexion. Pense à activer l'intent</p>
@@ -74,7 +74,7 @@
 <p>— seul le propriétaire du serveur peut l'ajouter, via son lien d'invitation OAuth.</p>
 <p>Les pages concernées ne sont pas cachées : elles expliquent pourquoi elles ne servent à</p>
 <p>rien ici. Avec un compte utilisateur, le client Discord habituel revient.</p>
-<h2>Ce que Nebula ajoute</h2>
+<h2>Ce que Voidcord ajoute</h2>
 <ul><li><strong>Détection des jeux</strong> : le jeu en cours apparaît sur le profil, sans le client officiel.</li><li><strong>Éditeur de messages</strong> : embeds, boutons, fichiers et catalogue d'émojis, pour les bots. L'ancien éditeur d'embed, plus simple, reste disponible dans les réglages du plugin BotClient.</li><li><strong>Apparence</strong> : un plugin pour changer le nom affiché et choisir ses badges. Purement visuel, rien n'est envoyé à Discord.</li><li><strong>Interface en français</strong>, y compris les messages d'erreur.</li></ul>
 <h2>Réglages</h2>
 <p>Un clic droit sur l'icône dans la zone de notification, puis <strong>Paramètres</strong>, ouvre la</p>
@@ -84,13 +84,13 @@
 <p>Certains réglages ne prennent effet qu'au lancement suivant ; la fenêtre le dit pour</p>
 <p>chacun d'eux.</p>
 <h2>Mises à jour</h2>
-<p>Nebula regarde, peu après son démarrage, s'il existe une version plus récente sur la page</p>
+<p>Voidcord regarde, peu après son démarrage, s'il existe une version plus récente sur la page</p>
 <p>des releases de ce dépôt. Si c'est le cas, une notification te le dit et la mise à jour se</p>
 <p>télécharge en arrière-plan ; elle s'installe à la fermeture de l'application.</p>
 <p>Cette recherche peut être coupée dans les réglages ; la recherche manuelle, depuis</p>
-<p>l'onglet <strong>Nebula</strong>, reste possible.</p>
-<p>Les nouveautés de chaque version sont dans l'onglet <strong>Nebula → Nouveautés</strong> du client, et</p>
-<p>cette page est le texte que tu lis dans <strong>Nebula → Documentation</strong>.</p>
+<p>l'onglet <strong>Voidcord</strong>, reste possible.</p>
+<p>Les nouveautés de chaque version sont dans l'onglet <strong>Voidcord → Nouveautés</strong> du client, et</p>
+<p>cette page est le texte que tu lis dans <strong>Voidcord → Documentation</strong>.</p>
 <h2>Un bug, une question ?</h2>
 <p>Rejoins le serveur Discord : <strong>https://discord.gg/TNTYSmy4mX</strong></p>
 <p>C'est le seul endroit où je réponds. Pour un bug, dis ce que tu faisais, ce qui s'est passé,</p>
@@ -98,13 +98,13 @@
 <p>chemin dans l'application, et la réponse en dépend.</p>
 <h2>Licence et crédits</h2>
 <p>Travail d'origine : <strong><a href="https://github.com/aiko-chan-ai/DiscordBotClient">aiko-chan-ai/DiscordBotClient</a></strong>.</p>
-<p>Nebula en est une modification personnelle, écrite avec Claude.</p></article>
+<p>Voidcord en est une modification personnelle, écrite avec Claude.</p></article>
 </main>
 
 <footer>
-    <a href="https://github.com/B-loom/discord-bot-client-Nebula">Code source</a>
+    <a href="https://github.com/B-loom/Voidcord">Code source</a>
     <span>·</span>
-    <a href="https://github.com/B-loom/discord-bot-client-Nebula/releases">Toutes les versions</a>
+    <a href="https://github.com/B-loom/Voidcord/releases">Toutes les versions</a>
     <span>·</span>
     <a href="https://discord.gg/TNTYSmy4mX">Serveur Discord</a>
 </footer>

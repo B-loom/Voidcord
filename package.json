@@ -1,14 +1,14 @@
 {
-  "name": "nebula",
-  "productName": "Nebula",
-  "version": "1.2.9",
-  "description": "Nebula - se connecter à Discord avec un compte ou un token de bot",
+  "name": "voidcord",
+  "productName": "Voidcord",
+  "version": "1.3.1",
+  "description": "Voidcord - se connecter à Discord avec un compte ou un token de bot",
   "author": {
     "name": "aiko-chan-ai",
     "email": "aiko@shiroko.onmicrosoft.com"
   },
   "repository": {
-    "url": "https://github.com/nebula-client/nebula"
+    "url": "https://github.com/voidcord-client/voidcord"
   },
   "license": "GPL-3.0",
   "main": "build/index.js",
@@ -23,7 +23,7 @@
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "format": "prettier --write src/**/*.ts",
     "site": "node scripts/buildSite.mjs",
-    "vencord": "node scripts/syncReadme.mjs && node scripts/applyNebulaOverlay.mjs && tsx scripts/vencordBuild.ts && node scripts/buildSite.mjs",
+    "vencord": "node scripts/syncReadme.mjs && node scripts/applyVoidcordOverlay.mjs && tsx scripts/vencordBuild.ts && node scripts/buildSite.mjs",
     "core:update": "tsx scripts/update.ts",
     "start": "electron .",
     "mac": "electron-builder -m --publish never",
@@ -34,7 +34,7 @@
     "build:fast": "npm run vencord && npm run build:ts && electron-builder -w --dir",
     "build:deps": "npm run vencord",
     "build:settings": "tsc -p tsconfig.renderer.json && vite build --config scripts/settingsVite.mts",
-    "requirement": "npm install && tsx scripts/vencordClone.ts && node scripts/applyNebulaOverlay.mjs"
+    "requirement": "npm install && tsx scripts/vencordClone.ts && node scripts/applyVoidcordOverlay.mjs"
   },
   "keywords": [],
   "devDependencies": {
@@ -113,8 +113,8 @@
       "!tsconfig.renderer.json",
       "!plans"
     ],
-    "appId": "Nebula",
-    "productName": "Nebula",
+    "appId": "Voidcord",
+    "productName": "Voidcord",
     "artifactName": "${productName}-${os}-${arch}.${ext}",
     "copyright": "Copyright Â© 2026 aiko-chan-ai",
     "mac": {
@@ -146,7 +146,7 @@
       ],
       "desktop": {
         "entry": {
-          "Name": "Nebula",
+          "Name": "Voidcord",
           "GenericName": "Internet Messenger",
           "Type": "Application",
           "Categories": "Network;InstantMessaging;Chat;",
@@ -176,7 +176,7 @@
       {
         "provider": "github",
         "owner": "B-loom",
-        "repo": "discord-bot-client-Nebula"
+        "repo": "Voidcord"
       }
     ],
     "asar": false

@@ -132,8 +132,8 @@ out
 .yarn/install-state.gz
 .pnp.*
 
-# Nebula
+# Voidcord
 # Vencord is cloned and reset by "npm run requirement", so the clone stays out of git.
-# Everything written for Nebula lives in nebula/ and is laid over the clone at build time.
+# Everything written for Voidcord lives in voidcord/ and is laid over the clone at build time.
 /microcord-master
 build.log

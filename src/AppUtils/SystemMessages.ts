@@ -97,7 +97,7 @@ Ouvre la fenêtre de connexion pour ajouter un compte avec son adresse e-mail et
                             style: 5,
                             label: "Le site",
                             url: Constants.ProjectSiteUrl,
-                            emoji: { id: Constants.SiteEmojiId, name: "nebula", animated: false },
+                            emoji: { id: Constants.SiteEmojiId, name: "voidcord", animated: false },
                         },
                     ],
                 },

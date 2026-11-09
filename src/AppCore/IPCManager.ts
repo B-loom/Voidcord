@@ -24,7 +24,7 @@ export function isTrustedAppFrame (event: IpcMainEvent | IpcMainInvokeEvent, con
 }
 
 /**
- * Nebula ouvre une fenêtre de client par compte : la fenêtre principale n'est donc pas
+ * Voidcord ouvre une fenêtre de client par compte : la fenêtre principale n'est donc pas
  * la seule à avoir le droit de parler au processus principal. Le contrôle d'origine est
  * élargi à ces fenêtres, et à elles seules.
  */
@@ -39,7 +39,7 @@ export function isTrustedClientFrame (event: IpcMainEvent | IpcMainInvokeEvent, 
 /**
  * Les comptes enregistrés se pilotent depuis deux endroits, et deux seulement : la
  * fenêtre de connexion séparée (avec son captcha, qui charge un fichier local) et
- * l'écran d'ajout de compte que Nebula dessine à l'intérieur de Discord. Oublier le
+ * l'écran d'ajout de compte que Voidcord dessine à l'intérieur de Discord. Oublier le
  * second, c'est refuser toute connexion par compte avec « expéditeur IPC non autorisé ».
  */
 export function isAccountFrame (event: IpcMainEvent | IpcMainInvokeEvent, mainApp: DiscordBotClient): boolean {
@@ -72,7 +72,7 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
             return frameName ? mainApp.childWindows.get(frameName) : mainApp.appWindow;
         }
         /*
-         * Nebula ouvre une fenêtre de client par compte. Les boutons de barre de titre
+         * Voidcord ouvre une fenêtre de client par compte. Les boutons de barre de titre
          * doivent agir sur la fenêtre où l'on a cliqué : sans cela, un deuxième client
          * réduisait ou agrandissait le premier.
          */
@@ -166,7 +166,7 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
                 ) {
                     dialog.showErrorBox(
                         "L’intent MessageContent est requis",
-                        "Active l’intent MessageContent dans les réglages de ton application, sur le portail Discord.\nPour ne plus voir cet avertissement, change le réglage correspondant dans les paramètres de Nebula (clic droit sur l’icône de la zone de notification).",
+                        "Active l’intent MessageContent dans les réglages de ton application, sur le portail Discord.\nPour ne plus voir cet avertissement, change le réglage correspondant dans les paramètres de Voidcord (clic droit sur l’icône de la zone de notification).",
                     );
                     throw new Error("L’intent MessageContent est requis.");
                 }
@@ -231,7 +231,7 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
             event.returnValue = isTrustedClientFrame(event, mainApp) ? Constants.SupportInvite : null;
         })
         .on(IPCEvent.GetLangue, event => {
-            // La langue sert à toutes les fenêtres de Nebula, y compris celle de connexion
+            // La langue sert à toutes les fenêtres de Voidcord, y compris celle de connexion
             event.returnValue = isAccountFrame(event, mainApp) ? mainApp.config.config.langue : null;
         })
         .on(IPCEvent.GetAccountTokens, event => {
@@ -312,7 +312,7 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
         return mainApp.openClientWindow(token);
     });
     /*
-     * Les réglages lus et écrits depuis la page Nebula, à l'intérieur de Discord : la
+     * Les réglages lus et écrits depuis la page Voidcord, à l'intérieur de Discord : la
      * fenêtre à part reste, mais on n'est plus obligé d'y passer.
      */
     mainApp.ipcMain.handle(IPCEvent.GetSettings, event => {
@@ -350,7 +350,7 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
         if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         return JSON.parse(JSON.stringify(mainApp.config.save(valeur)));
     });
-    // Les réglages de Nebula, ouverts depuis l'onglet Nebula du client
+    // Les réglages de Voidcord, ouverts depuis l'onglet Voidcord du client
     mainApp.ipcMain.handle(IPCEvent.OpenSettings, event => {
         if (!isTrustedClientFrame(event, mainApp)) throw new Error("Expéditeur IPC non autorisé.");
         mainApp.openSettingsWindow();

@@ -18,7 +18,7 @@ export class SettingsWindow {
             minWidth: 720,
             minHeight: 480,
             show: false,
-            title: "Nebula — Réglages",
+            title: "Voidcord — Réglages",
             backgroundColor: "#202020",
             autoHideMenuBar: true,
             icon: path.join(app.getAppPath(), "assets", "icon.png"),
@@ -72,7 +72,7 @@ export class SettingsWindow {
             if (this.window.isDestroyed()) return;
             dialog.showErrorBox(
                 "Impossible d’ouvrir les réglages",
-                "L’interface des réglages est absente ou n’a pas pu être chargée. Recompile ou réinstalle Nebula.",
+                "L’interface des réglages est absente ou n’a pas pu être chargée. Recompile ou réinstalle Voidcord.",
             );
             this.window.destroy();
         });

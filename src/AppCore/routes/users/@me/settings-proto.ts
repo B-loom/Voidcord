@@ -11,7 +11,7 @@ import { validateBotToken } from "src/AppUtils/ValidateBotToken";
 
 /**
  * Settings and favourites are stored by each client window, in a database of its own:
- * Nebula opens one window per account, and each one only holds what belongs to it.
+ * Voidcord opens one window per account, and each one only holds what belongs to it.
  * Asking the main window for another account's settings therefore answers with the wrong
  * ones — a bot inheriting the status of the account signed in elsewhere, or favourites
  * that come back empty. The window that owns the account is asked instead.
@@ -27,7 +27,7 @@ function windowFor (accountId: string) {
 const app = Router({ mergeParams: true });
 
 /*
- * Un bot n'a pas de réglages chez Discord : Nebula les lui garde dans sa propre base,
+ * Un bot n'a pas de réglages chez Discord : Voidcord les lui garde dans sa propre base,
  * et c'est ce que servent les deux routes ci-dessous.
  *
  * Un compte utilisateur, lui, a les siens chez Discord — ses favoris de GIF,
@@ -57,7 +57,7 @@ function waitForSettingsEvent (
     return new Promise((resolve, reject) => {
         const onEvent = (event: IpcMainEvent, botId: string, settings: string) => {
             /*
-             * Nebula ouvre une fenêtre de client par compte : s’en tenir à la fenêtre
+             * Voidcord ouvre une fenêtre de client par compte : s’en tenir à la fenêtre
              * principale laisserait les autres sans réponse, donc sans favoris ni
              * réglages, et sans la moindre erreur visible.
              */

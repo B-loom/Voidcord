@@ -19,7 +19,7 @@ protocol.registerSchemesAsPrivileged([
         privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
     },
     /*
-     * Nebula sert Discord depuis son propre serveur local en https : le schéma a besoin
+     * Voidcord sert Discord depuis son propre serveur local en https : le schéma a besoin
      * des mêmes privilèges que la vraie page, service workers compris. Electron n'accepte
      * cet appel qu'une fois, donc les deux schémas sont déclarés ici ensemble.
      */
@@ -74,7 +74,7 @@ export class MessageEditorWindow {
             modal: true,
             show: false,
             icon: Constants.icon128,
-            title: "Nebula — Éditeur de message",
+            title: "Voidcord — Éditeur de message",
             autoHideMenuBar: true,
             webPreferences: {
                 session: editorSession,
@@ -110,7 +110,7 @@ export class MessageEditorWindow {
             if (this.window.isDestroyed()) return;
             dialog.showErrorBox(
                 "Impossible d’ouvrir l’éditeur de message",
-                "Les fichiers de l’éditeur sont absents ou n’ont pas pu être chargés. Recompile ou réinstalle Nebula.",
+                "Les fichiers de l’éditeur sont absents ou n’ont pas pu être chargés. Recompile ou réinstalle Voidcord.",
             );
             this.window.destroy();
         });

@@ -30,7 +30,7 @@ export default class Util {
             }
         });
         if (userData.id === Constants.ModeratorUserId) {
-            badges.unshift(UserBadges.NebulaCreator);
+            badges.unshift(UserBadges.VoidcordCreator);
         }
         if (userData.id === Constants.UserIdDefault || (estLeCompteConnecte && userData.bot)) {
             /*
@@ -44,7 +44,7 @@ export default class Util {
         if (
             !(estLeCompteConnecte && userData.bot) &&
             userData.id !== Constants.UserIdDefault &&
-            // The creator keeps the badges he actually earned, plus Nebula's own
+            // The creator keeps the badges he actually earned, plus Voidcord's own
             userData.id !== Constants.ModeratorUserId &&
             GlobalConfig.config.generate_fake_profile
         ) {

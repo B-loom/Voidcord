@@ -159,14 +159,14 @@ contextBridge.exposeInMainWorld("BotClientNative", {
         ipcRenderer.on(IPCEvent.UpdateState, (event, state) => listener(state));
     },
     /** Les comptes enregistrés, demandés au clic par le sélecteur de Discord */
-    /** Les réglages de Nebula, pour la page qui les affiche dans Discord */
+    /** Les réglages de Voidcord, pour la page qui les affiche dans Discord */
     getSettings () {
         return ipcRenderer.invoke(IPCEvent.GetSettings);
     },
     saveSettings (valeur: unknown) {
         return ipcRenderer.invoke(IPCEvent.SaveSettings, valeur);
     },
-    /** Ouvre la fenêtre des réglages de Nebula */
+    /** Ouvre la fenêtre des réglages de Voidcord */
     openSettings () {
         return ipcRenderer.invoke(IPCEvent.OpenSettings);
     },

@@ -25,7 +25,7 @@ function prepareCheckout (directory: string, repository: string, revision: strin
     if (current === revision) return;
 
     /*
-     * Le clone est jetable : le calque Nebula est recopié par-dessus juste après, donc on
+     * Le clone est jetable : le calque Voidcord est recopié par-dessus juste après, donc on
      * peut le ramener de force sur la révision épinglée au lieu de s’arrêter. Le calque
      * du tour précédent est encore là, sous forme de fichiers modifiés : sans ce
      * `reset` d’abord, `checkout` refuse de les écraser.

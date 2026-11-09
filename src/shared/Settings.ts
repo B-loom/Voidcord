@@ -20,7 +20,7 @@ export const settingsDefinitions = [
     {
         key: "langue",
         displayName: "Langue / Language",
-        description: "La langue des textes de Nebula. Discord garde la sienne, réglée dans ses propres paramètres.",
+        description: "La langue des textes de Voidcord. Discord garde la sienne, réglée dans ses propres paramètres.",
         type: "select",
         defaultValue: "fr",
         options: [
@@ -51,7 +51,7 @@ export const settingsDefinitions = [
     {
         key: "startup_animation",
         displayName: "Animation de démarrage",
-        description: "S'applique au prochain lancement de Nebula.",
+        description: "S'applique au prochain lancement de Voidcord.",
         type: "select",
         defaultValue: "modern",
         options: [
@@ -62,7 +62,7 @@ export const settingsDefinitions = [
     {
         key: "doh_provider",
         displayName: "DNS chiffré (DNS over HTTPS)",
-        description: "Préfère un DNS chiffré, en retombant sur celui du système. S'applique au prochain lancement de Nebula.",
+        description: "Préfère un DNS chiffré, en retombant sur celui du système. S'applique au prochain lancement de Voidcord.",
         type: "select",
         defaultValue: "cloudflare",
         options: [
@@ -76,7 +76,7 @@ export const settingsDefinitions = [
     {
         key: "use_system_proxy",
         displayName: "Utiliser le proxy du système",
-        description: "Suit les réglages de proxy du système. Le proxy doit laisser passer discord.com, sinon Nebula n'atteint plus sa propre page locale. S'applique au prochain lancement.",
+        description: "Suit les réglages de proxy du système. Le proxy doit laisser passer discord.com, sinon Voidcord n'atteint plus sa propre page locale. S'applique au prochain lancement.",
         type: "boolean",
         defaultValue: false,
     },
@@ -100,14 +100,14 @@ export const settingsDefinitions = [
     {
         key: "generate_fake_profile",
         displayName: "Compléter les profils en local",
-        description: "Ajoute des détails de profil simulés dans Nebula. Les vrais profils ne changent pas.",
+        description: "Ajoute des détails de profil simulés dans Voidcord. Les vrais profils ne changent pas.",
         type: "boolean",
         defaultValue: true,
     },
     {
         key: "auto_check_updates",
         displayName: "Chercher les mises à jour automatiquement",
-        description: "Cherche une nouvelle version de Nebula au démarrage. La recherche manuelle reste possible.",
+        description: "Cherche une nouvelle version de Voidcord au démarrage. La recherche manuelle reste possible.",
         type: "boolean",
         defaultValue: true,
     },
@@ -132,7 +132,7 @@ type Traduction = { displayName: string; description: string; options?: Record<s
 const ENGLISH: Record<string, Traduction> = {
     langue: {
         displayName: "Langue / Language",
-        description: "The language of Nebula's own text. Discord keeps its own, set in its own settings.",
+        description: "The language of Voidcord's own text. Discord keeps its own, set in its own settings.",
     },
     langue_choisie: {
         displayName: "Language already chosen",
@@ -145,12 +145,12 @@ const ENGLISH: Record<string, Traduction> = {
     },
     startup_animation: {
         displayName: "Startup animation",
-        description: "Applies the next time Nebula starts.",
+        description: "Applies the next time Voidcord starts.",
         options: { modern: "Modern (default)", classic: "Discord's way" },
     },
     doh_provider: {
         displayName: "Encrypted DNS (DNS over HTTPS)",
-        description: "Prefers an encrypted DNS, falling back to the system one. Applies the next time Nebula starts.",
+        description: "Prefers an encrypted DNS, falling back to the system one. Applies the next time Voidcord starts.",
         options: {
             off: "Off (system DNS)",
             automatic: "Automatic",
@@ -161,7 +161,7 @@ const ENGLISH: Record<string, Traduction> = {
     },
     use_system_proxy: {
         displayName: "Use the system proxy",
-        description: "Follows the system proxy settings. The proxy has to let discord.com through, otherwise Nebula can no longer reach its own local page. Applies at the next launch.",
+        description: "Follows the system proxy settings. The proxy has to let discord.com through, otherwise Voidcord can no longer reach its own local page. Applies at the next launch.",
     },
     guilds_per_shard: {
         displayName: "Servers per shard",
@@ -173,11 +173,11 @@ const ENGLISH: Record<string, Traduction> = {
     },
     generate_fake_profile: {
         displayName: "Fill in profiles locally",
-        description: "Adds made-up profile details inside Nebula. Real profiles do not change.",
+        description: "Adds made-up profile details inside Voidcord. Real profiles do not change.",
     },
     auto_check_updates: {
         displayName: "Check for updates automatically",
-        description: "Looks for a new version of Nebula at startup. Checking by hand stays possible.",
+        description: "Looks for a new version of Voidcord at startup. Checking by hand stays possible.",
     },
     cache_assets: {
         displayName: "Cache the assets",

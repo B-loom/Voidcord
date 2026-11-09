@@ -9,7 +9,7 @@ app.get("/", (req, res) => {
         code: 0,
         message: "OK",
         version: globalThis.botClient.app.getVersion(),
-        isBotClient: req.headers["user-agent"]?.includes("Nebula") || false,
+        isBotClient: req.headers["user-agent"]?.includes("Voidcord") || false,
     });
 });
 

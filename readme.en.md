@@ -1,23 +1,23 @@
-# Nebula
+# Voidcord
 
-Nebula is a desktop Discord client that brings **your Discord accounts** and **your bots**
+Voidcord is a desktop Discord client that brings **your Discord accounts** and **your bots**
 together in one application: one window per account, the same client for all of them.
 
 ---
 
-## ⚠️ Read this before using Nebula
+## ⚠️ Read this before using Voidcord
 
 > **This project was written with [Claude](https://claude.ai), Anthropic's assistant.**
 
 > **I am responsible for nothing.** Not for a disabled or banned account, not for a deleted
 > bot, not for lost data, not for your computer crashing, not for anything else that
-> happens while using Nebula. You use it at your own risk.
+> happens while using Voidcord. You use it at your own risk.
 
 > **A third-party client goes against Discord's terms of service.** Logging in with a user
 > account from anything other than the official client can get that account disabled. Bots
 > use the official API and do not have this problem.
 
-> **Nebula is not an original project.** It is a modified version of
+> **Voidcord is not an original project.** It is a modified version of
 > **[aiko-chan-ai/DiscordBotClient](https://github.com/aiko-chan-ai/DiscordBotClient)**,
 > which deserves all the credit for the underlying work. Thank you to its author.
 
@@ -31,14 +31,14 @@ together in one application: one window per account, the same client for all of 
 
 ## The website
 
-**https://b-loom.github.io/discord-bot-client-Nebula/**
+**https://b-loom.github.io/Voidcord/**
 
 Download, documentation, what's new and licence, all in one place.
 
 ## Installing
 
 Download the latest installer from the website or from the
-[Releases](https://github.com/B-loom/discord-bot-client-Nebula/releases) page, then run it.
+[Releases](https://github.com/B-loom/Voidcord/releases) page, then run it.
 It lets you choose the install folder and creates the usual shortcuts.
 
 Windows will probably show a warning on launch: the application is not signed with a paid
@@ -49,7 +49,7 @@ certificate. Go through "More info", then "Run anyway".
 ### With a Discord account
 
 Open the login window — from the link under the sign-in button, from "Add an account", or
-from Nebula's icon in the system tray. Enter your email address and your password; Nebula
+from Voidcord's icon in the system tray. Enter your email address and your password; Voidcord
 handles the rest:
 
 - the captcha, in a window of its own;
@@ -57,7 +57,7 @@ handles the rest:
 
 You can also paste an account token directly if you already have one.
 
-Only the token is kept, in the `accounts.json` file inside Nebula's data folder, on this
+Only the token is kept, in the `accounts.json` file inside Voidcord's data folder, on this
 computer. **Your password is never saved** and never leaves the login window.
 
 ### With a bot
@@ -83,7 +83,7 @@ owner can add it, through its OAuth invite link.
 The pages concerned are not hidden: they explain why they are of no use here. With a user
 account, the usual Discord client comes back.
 
-## What Nebula adds
+## What Voidcord adds
 
 - **Game detection**: the game you are playing shows on your profile, without the official
   client.
@@ -103,15 +103,15 @@ Some settings only take effect on the next launch; the window says so for each o
 
 ## Updates
 
-Shortly after starting, Nebula checks whether a newer version exists on this repository's
+Shortly after starting, Voidcord checks whether a newer version exists on this repository's
 releases page. If there is one, a notification tells you and the update downloads in the
 background; it installs when you close the application.
 
-This check can be turned off in the settings; the manual check, from the **Nebula** tab,
+This check can be turned off in the settings; the manual check, from the **Voidcord** tab,
 remains available.
 
-Each version's changes are in the client's **Nebula → What's new** tab, and this page is
-the text you are reading in **Nebula → Documentation**.
+Each version's changes are in the client's **Voidcord → What's new** tab, and this page is
+the text you are reading in **Voidcord → Documentation**.
 
 ## A bug, a question?
 
@@ -124,4 +124,4 @@ same path through the application, and the answer depends on it.
 ## Licence and credits
 
 Original work: **[aiko-chan-ai/DiscordBotClient](https://github.com/aiko-chan-ai/DiscordBotClient)**.
-Nebula is a personal modification of it, written with Claude.
+Voidcord is a personal modification of it, written with Claude.

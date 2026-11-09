@@ -28,7 +28,7 @@ export class StartupWindow {
             transparent: !classic,
             hasShadow: classic,
             backgroundColor: classic ? "#282b30" : "#00000000",
-            title: "Nebula",
+            title: "Voidcord",
             autoHideMenuBar: true,
             webPreferences: {
                 preload: path.join(__dirname, "..", "Preloads", "StartupPreload.js"),
@@ -72,7 +72,7 @@ export class StartupWindow {
             if (this.window.isDestroyed()) return;
             dialog.showErrorBox(
                 "Le démarrage a échoué",
-                "L’écran de démarrage n’a pas pu être chargé. Réinstalle Nebula.",
+                "L’écran de démarrage n’a pas pu être chargé. Réinstalle Voidcord.",
             );
             quit();
         });
@@ -86,7 +86,7 @@ export class StartupWindow {
         this.update({ phase: "loading" });
         clearTimeout(this.timer);
         this.timer = setTimeout(
-            () => this.fail("Nebula met trop de temps à démarrer. Vérifie ta connexion et réessaie."),
+            () => this.fail("Voidcord met trop de temps à démarrer. Vérifie ta connexion et réessaie."),
             45000,
         );
     }
