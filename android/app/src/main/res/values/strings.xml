@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Voidcord</string>
+    <string name="titre_reglages">Réglages de Voidcord</string>
+    <string name="titre_comptes">Comptes</string>
+    <string name="titre_langue">Langue</string>
+    <string name="titre_editeur">Éditeur de message</string>
+    <string name="titre_captcha">Vérification</string>
+    <string name="appel_en_cours">Appel en cours</string>
+    <string name="appel_retour">Toucher pour revenir à Voidcord</string>
+</resources>

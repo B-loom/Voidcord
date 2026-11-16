@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Le fond de Discord, pour qu'aucune bande claire n'apparaisse au lancement. -->
+    <style name="Theme.Voidcord" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/voidcord_fond</item>
+        <item name="android:statusBarColor">@color/voidcord_fond</item>
+        <item name="android:navigationBarColor">@color/voidcord_fond</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Les écrans secondaires gardent leur barre de titre : on y revient en arrière. -->
+    <style name="Theme.Voidcord.Ecran" parent="Theme.AppCompat">
+        <item name="android:windowBackground">@color/voidcord_fond</item>
+        <item name="android:statusBarColor">@color/voidcord_fond</item>
+    </style>
+</resources>

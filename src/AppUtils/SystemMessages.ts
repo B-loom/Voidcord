@@ -77,14 +77,12 @@ Ouvre la fenêtre de connexion pour ajouter un compte avec son adresse e-mail et
             components: [
                 {
                     type: 1, // action row
+                    /*
+                     * Le serveur d'entraide a fermé : le bouton qui y menait a disparu
+                     * avec lui. Restent le dépôt et le site, les deux endroits où l'on
+                     * peut encore poser une question.
+                     */
                     components: [
-                        {
-                            type: 2, // button
-                            style: 5, // link
-                            label: "Rejoindre le serveur",
-                            url: Constants.SupportInvite,
-                            emoji: { id: Constants.DiscordEmojiId, name: "discord", animated: false },
-                        },
                         {
                             type: 2,
                             style: 5,

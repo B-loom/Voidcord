@@ -34,7 +34,11 @@
     "build:fast": "npm run vencord && npm run build:ts && electron-builder -w --dir",
     "build:deps": "npm run vencord",
     "build:settings": "tsc -p tsconfig.renderer.json && vite build --config scripts/settingsVite.mts",
-    "requirement": "npm install && tsx scripts/vencordClone.ts && node scripts/applyVoidcordOverlay.mjs"
+    "requirement": "npm install && tsx scripts/vencordClone.ts && node scripts/applyVoidcordOverlay.mjs",
+    "mobile:deps": "node scripts/fetchNodeMobile.mjs",
+    "build:mobile": "npm run build:ts && node scripts/buildMobile.mjs",
+    "apk": "npm run mobile:deps && npm run build:mobile && node scripts/buildApk.mjs",
+    "apk:debug": "npm run build:mobile && node scripts/buildApk.mjs --debug"
   },
   "keywords": [],
   "devDependencies": {

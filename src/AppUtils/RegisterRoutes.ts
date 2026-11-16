@@ -49,20 +49,38 @@ export function traverseDirectorySync (options: TraverseDirectoryOptions): strin
     return result;
 }
 
+/** Un fichier de route déjà chargé : son chemin d'origine et le module qu'il exporte. */
+export type RouteChargee = { file: string; module: unknown };
+
+let routesFournies: RouteChargee[] | null = null;
+
+/**
+ * Remplace le parcours du disque par une liste de routes déjà chargées.
+ *
+ * Le portage Android compile tout en un seul fichier JavaScript : il n'y a plus de
+ * dossier `routes/` à lire, ni de `require` dynamique possible. `scripts/buildMobile.mjs`
+ * engendre la liste des 133 routes et l'installe ici avant que l'APIServer ne se charge.
+ * Sur l'ordinateur, rien n'appelle cette fonction et le parcours du disque reste en place.
+ */
+export function provideRoutes (routes: RouteChargee[] | null) {
+    routesFournies = routes;
+}
+
 export function registerRoutesSync (app: Express, path: string, autoPrefix: string[] = []) {
     const route = Router({ mergeParams: true });
     const root = resolve(path);
-    const files = traverseDirectorySync({
-        dirname: root,
-        recursive: true,
-    });
-    console.log(`[Server] Found ${files.length} route files in ${path}`);
+    const chargees: RouteChargee[] =
+        routesFournies ??
+        traverseDirectorySync({ dirname: root, recursive: true }).map(absolutePath => ({
+            file: absolutePath,
+            // eslint-disable-next-line
+            module: require(absolutePath),
+        }));
+    console.log(`[Server] Found ${chargees.length} route files in ${path}`);
     const result = [];
 
-    for (const absolutePath of files) {
-        // eslint-disable-next-line
-        const module = require(absolutePath);
-        const res = registerRouteSync(route, root, absolutePath, module);
+    for (const { file, module } of chargees) {
+        const res = registerRouteSync(route, root, file, module);
         if (res) result.push(res);
     }
 

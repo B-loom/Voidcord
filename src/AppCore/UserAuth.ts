@@ -61,6 +61,14 @@ export class UserAuth {
      */
     static tokens = new Set<string>(UserAuth.accounts.filter(a => !a.bot).map(a => a.token));
 
+    /**
+     * Le `login_instance_id` que Discord a donné avec chaque ticket en attente.
+     *
+     * Il ne vit que le temps d'une connexion — entre le mot de passe et le code — et
+     * n'est jamais écrit sur le disque : c'est un jeton de tentative, pas un compte.
+     */
+    private static instancesParTicket = new Map<string, string>();
+
     static load (): SavedAccount[] {
         try {
             if (!fs.existsSync(UserAuth.storePath)) return [];
@@ -132,6 +140,24 @@ export class UserAuth {
         } catch {
             //
         }
+        /*
+         * Une trace de ce que Discord répond vraiment, sans les secrets.
+         *
+         * La connexion par compte est l'endroit du projet où une hypothèse coûte le plus
+         * cher : il n'y a rien à regarder quand elle échoue, et le message affiché vient
+         * de Discord sans son contexte. Le code d'erreur et les champs refusés, eux,
+         * disent précisément laquelle des trois étapes a été rejetée. Ni le mot de passe,
+         * ni le code, ni le jeton ne passent par ici.
+         */
+        logger.info(
+            `POST ${endpoint} → ${res.status}`,
+            // Les noms des champs envoyés, jamais leurs valeurs.
+            `envoyé=${Object.keys(body).join(",")}`,
+            `code=${typeof data.code === "number" ? data.code : "—"}`,
+            `message=${typeof data.message === "string" ? data.message : "—"}`,
+            `champs=${data.errors ? Object.keys(data.errors as object).join(",") : "—"}`,
+            `réponse=${Object.keys(data).join(",") || "vide"}`,
+        );
         return { res, data };
     }
 
@@ -155,6 +181,20 @@ export class UserAuth {
                     data.sms && { type: "sms" },
                     data.backup && { type: "backup" },
                 ].filter(Boolean);
+            /*
+             * Depuis que Discord renvoie `login_instance_id`, il l'attend en retour à
+             * l'étape suivante : il rattache ainsi la vérification à la tentative de
+             * connexion qui l'a demandée. Sans lui, `/auth/mfa/totp` répond « Invalid
+             * two-factor code » — le message qui fait chercher une faute de frappe dans
+             * un code pourtant juste.
+             *
+             * Il est gardé ici, à côté du ticket, plutôt que renvoyé à l'écran : ni le
+             * calque, ni l'IPC, ni la page n'ont à le connaître, et aucune signature ne
+             * change.
+             */
+            if (typeof data.ticket === "string" && typeof data.login_instance_id === "string") {
+                UserAuth.instancesParTicket.set(data.ticket, data.login_instance_id);
+            }
             return { status: "mfa", ticket: data.ticket, methods: methods as { type: string }[] };
         }
         if (typeof data.token === "string" && data.token) {
@@ -288,13 +328,18 @@ export class UserAuth {
     static async mfa ({ ticket, code, method = "totp" }: MfaPayload): Promise<AuthResult> {
         if (!code) return { status: "error", message: "Un code de vérification est obligatoire." };
         try {
+            const instance = UserAuth.instancesParTicket.get(ticket);
             const { res, data } = await UserAuth.request(`/auth/mfa/${method}`, {
                 ticket,
                 code: code.replace(/\s/g, ""),
                 login_source: null,
                 gift_code_sku_id: null,
+                ...(instance ? { login_instance_id: instance } : {}),
             });
-            return UserAuth.handleResponse(data, res.status);
+            const resultat = await UserAuth.handleResponse(data, res.status);
+            // Le ticket ne resservira plus : il part avec la tentative qu'il accompagnait.
+            if (resultat.status === "success") UserAuth.instancesParTicket.delete(ticket);
+            return resultat;
         } catch (e) {
             logger.error("MFA request failed:", e);
             return { status: "error", message: (e as Error).message };
@@ -304,7 +349,11 @@ export class UserAuth {
     /** Ask Discord to send the SMS code for a pending MFA ticket */
     static async sendSms (ticket: string) {
         try {
-            const { res, data } = await UserAuth.request("/auth/mfa/sms/send", { ticket });
+            const instance = UserAuth.instancesParTicket.get(ticket);
+            const { res, data } = await UserAuth.request("/auth/mfa/sms/send", {
+                ticket,
+                ...(instance ? { login_instance_id: instance } : {}),
+            });
             if (res.ok) return { success: true, phone: (data as { phone?: string }).phone ?? null };
             return { success: false, message: (data as { message?: string }).message ?? `HTTP ${res.status}` };
         } catch (e) {

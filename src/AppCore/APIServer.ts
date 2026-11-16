@@ -28,25 +28,43 @@ if (Constants.VerboseAPIServerLogging) {
     );
 }
 
-const HttpsOptions = Util.generateSelfSignedCertificate();
-const localCertificate = new X509Certificate(HttpsOptions.cert);
+/*
+ * Le certificat est fabriqué à la première demande, pas au chargement du module.
+ *
+ * `selfsigned` produit une clé RSA de 2048 bits en JavaScript pur : sur un ordinateur
+ * cela passe inaperçu, sur un téléphone cela coûte plusieurs secondes au démarrage. Le
+ * portage Android sert le client en HTTP sur 127.0.0.1 — que Chromium traite comme une
+ * origine sûre — et ne touche donc jamais à ce qui suit.
+ */
+let certificatLocal: X509Certificate | undefined;
+let serveurHttps: https.Server | undefined;
+
+function serveurSecurise () {
+    if (!serveurHttps) {
+        const HttpsOptions = Util.generateSelfSignedCertificate();
+        certificatLocal = new X509Certificate(HttpsOptions.cert);
+        serveurHttps = https.createServer({ key: HttpsOptions.private, cert: HttpsOptions.cert }, app);
+    }
+    return serveurHttps;
+}
 
 /** Trust only the certificate generated for this process, never other invalid HTTPS certificates. */
 export function isLocalServerCertificate (data: string): boolean {
     try {
-        return localCertificate.raw.equals(new X509Certificate(data).raw);
+        if (!certificatLocal) return false;
+        return certificatLocal.raw.equals(new X509Certificate(data).raw);
     } catch {
         return false;
     }
 }
 
-const server = https.createServer(
-    {
-        key: HttpsOptions.private,
-        cert: HttpsOptions.cert,
-    },
-    app,
-);
+/**
+ * L'application Express elle-même, avec ses intergiciels et ses routes.
+ *
+ * Elle est exportée pour le portage Android, qui l'enveloppe dans un serveur HTTP au lieu
+ * du serveur HTTPS ci-dessus. Sur l'ordinateur, rien ne l'utilise.
+ */
+export { app as expressApp };
 
 const ignoreHeaders = ["cookie", "sec-", "referer", "origin", "authorization", "host"];
 
@@ -142,6 +160,7 @@ app.use((req, res, next) => {
 });
 
 export default async function startAppServer (): Promise<number> {
+    const server = serveurSecurise();
     return new Promise((resolve, reject) => {
         const callback = () => {
             const address = server.address() as AddressInfo;

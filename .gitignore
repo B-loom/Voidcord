@@ -137,3 +137,14 @@ out
 # Everything written for Voidcord lives in voidcord/ and is laid over the clone at build time.
 /microcord-master
 build.log
+
+# Node.js pour Android : 189 Mo téléchargés par `npm run mobile:deps`
+android/nodejs-mobile/
+# Le serveur embarqué, reconstruit par `npm run build:mobile`
+android/app/src/main/assets/nodejs-project/
+android/.gradle/
+android/build/
+android/app/build/
+android/app/.cxx/
+android/local.properties
+src/Mobile/routes.generated.ts

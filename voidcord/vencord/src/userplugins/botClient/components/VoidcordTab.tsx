@@ -15,6 +15,7 @@ import { Button, Forms } from "./legacyUi";
 import { isUserAccountSession } from "../utils/patches";
 import { CHANGELOG, README } from "./docs";
 import { CHANGELOG_EN, README_EN } from "./docs.en";
+import { CHANGELOG_APK, CHANGELOG_APK_EN, README_APK, README_APK_EN } from "./docs.apk";
 import { enAnglais, t } from "../langue";
 
 const cl = classNameFactory("vc-voidcord-");
@@ -193,11 +194,27 @@ function inline(text: string) {
 }
 
 /*
+ * Voidcord tourne-t-il dans l'application Android ?
+ *
+ * Le portage Android pose un objet natif sur la page pour les appels qui doivent répondre
+ * sur-le-champ ; sa seule présence suffit à reconnaître le téléphone. Sur l'ordinateur il
+ * n'existe pas, et rien ne change.
+ */
+function surAndroid() {
+    return typeof window !== "undefined" && "VoidcordNative" in window;
+}
+
+/*
  * La documentation et les nouveautés suivent la langue de Voidcord. Les textes français
  * sont les originaux — c'est la langue du projet — et docs.en.ts en porte la traduction.
+ *
+ * Sur Android, ce sont ceux de docs.apk.ts : l'APK a son dépôt, sa version et son
+ * changelog, et afficher ceux du bureau mentait sur ce qui tourne.
  */
 export function ReadmeTab() {
-    return <Markdown source={enAnglais() ? README_EN : README} />;
+    const anglais = enAnglais();
+    if (surAndroid()) return <Markdown source={anglais ? README_APK_EN : README_APK} />;
+    return <Markdown source={anglais ? README_EN : README} />;
 }
 
 type Definition = {
@@ -374,7 +391,9 @@ export function SettingsTab() {
 }
 
 export function ChangelogTab() {
-    return <Markdown source={enAnglais() ? CHANGELOG_EN : CHANGELOG} />;
+    const anglais = enAnglais();
+    if (surAndroid()) return <Markdown source={anglais ? CHANGELOG_APK_EN : CHANGELOG_APK} />;
+    return <Markdown source={anglais ? CHANGELOG_EN : CHANGELOG} />;
 }
 
 type UpdateState = {

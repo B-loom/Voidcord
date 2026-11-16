@@ -110,6 +110,36 @@ renuméroter tout l'historique pour cela.
 
 `npm run build:fast` ne produit que `dist/win-unpacked`, pour tester vite sans installateur.
 
+## Android
+
+Voidcord tourne aussi en APK, et c'est le même serveur : `src/AppCore/` et ses 133 routes
+sont compilés en un seul fichier JavaScript que Node exécute **dans** l'application, par
+nodejs-mobile, devant une WebView qui charge `http://127.0.0.1:<port>/app`. Rien n'a été
+réécrit — seul ce qui passait par Electron est remplacé, dans `src/Mobile/`.
+
+    npm run mobile:deps   # une fois : télécharge nodejs-mobile
+    npm run apk:debug     # APK de test dans dist/
+
+Deux choses à savoir avant d'y toucher :
+
+- **Le code partagé reste partagé.** Trois modifications seulement ont été faites hors de
+  `src/Mobile/` : `APIServer.ts` exporte son application Express et ne fabrique son
+  certificat qu'à la demande, et `RegisterRoutes.ts` accepte une liste de routes déjà
+  chargées (`provideRoutes`) au lieu de parcourir le disque. Le bureau passe exactement
+  par les mêmes chemins qu'avant.
+- **Le V8 de nodejs-mobile est sans ICU.** Aucune propriété Unicode (`\p{Letter}`) ne s'y
+  compile, et une seule suffit à empêcher le serveur de démarrer. `scripts/buildMobile.mjs`
+  les remplace et s'arrête s'il en reste.
+- **Il n'y a pas de `host-rules` dans une WebView.** Le client écrit des adresses absolues
+  vers `discord.com` — pour les messages comme pour les émojis — que le bureau détourne
+  sans rien dire. Ici l'origine est `127.0.0.1` : ces adresses partent vers le vrai Discord
+  et meurent en CORS, et ce qui en dépend s'affiche vide sans erreur lisible. Le détour se
+  fait dans `src/Mobile/pont.ts` (JavaScript) **et** dans `Branding.kt` (le reste). Ajouter
+  un appel absolu quelque part sans y penser casse donc la version mobile seule.
+
+Le détail — ce qui remplace quoi, comment diagnostiquer, ce qui ne marche pas et pourquoi —
+est dans [`docs/ANDROID.md`](docs/ANDROID.md).
+
 ## Diagnostiquer
 
 Le journal `%APPDATA%\Voidcord\logs\main.log` reçoit les messages du processus principal
