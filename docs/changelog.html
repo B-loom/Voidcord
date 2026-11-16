@@ -19,7 +19,7 @@
     <a class="brand" href="index.html">
         <img src="icon.png" alt="">
         <span>Voidcord</span>
-        <span class="version">v1.3.1</span>
+        <span class="version">v1.3.2</span>
     </a>
     <div class="nav-links"><a class="nav-link" href="index.html">Home</a><a class="nav-link" href="documentation.html">Documentation</a><a class="nav-link current" href="changelog.html">What's new</a><a class="nav-link" href="licence.html">Licence</a></div>
     <a class="lang" href="fr/changelog.html" hreflang="fr" lang="fr">Français</a>
@@ -27,6 +27,12 @@
 
 <main class="wrap">
 <article class="prose changelog"><h1>What's new</h1>
+<h2>v1.3.2 — The base moves to DiscordBotClient 3.10.7</h2>
+<p>Four fixes from the original project, all published after the 3.10.3 Voidcord was built</p>
+<p>on.</p>
+<ul><li><strong>Missing fonts and call encryption.</strong> The local proxy was sending Discord headers that were not meant for it — session cookies and the browser's "sec-" headers — and followed redirects on its own. Some requests were dropped along the way: fonts failed to load, and DAVE, the end-to-end encryption for calls, would not start.</li><li><strong>Requests with no body failed.</strong> An empty PUT, POST, PATCH or DELETE still announced a chunked body, and Discord could not parse it. Chunking is now only announced when a body really follows.</li><li><strong>Attachments send again.</strong> The upload presented itself as coming from canary.discord.com instead of discord.com.</li><li><strong>The microphone was cut off before being asked for.</strong> Chromium checks first, and only asks the real question if that check says yes; that check refused anything to do with sound. The camera is still refused.</li></ul>
+<h3>Also</h3>
+<ul><li><strong>A refused bot token says why.</strong> The client showed "Unauthorized" and nothing else. It now carries Discord's own message and the code it returned.</li></ul>
 <h2>v1.3.1 — Nebula becomes Voidcord</h2>
 <p>The project changes its name. <strong>Nebula is now called Voidcord</strong>: same application, same</p>
 <p>code, same repository — only the name changes, everywhere it was written. The</p>

@@ -142,6 +142,28 @@ Voidcord is a personal modification of it, written with Claude.
 
 export const CHANGELOG_EN = `# What's new
 
+## v1.3.2 — The base moves to DiscordBotClient 3.10.7
+
+Four fixes from the original project, all published after the 3.10.3 Voidcord was built
+on.
+
+- **Missing fonts and call encryption.** The local proxy was sending Discord headers that
+  were not meant for it — session cookies and the browser's "sec-" headers — and
+  followed redirects on its own. Some requests were dropped along the way: fonts failed to
+  load, and DAVE, the end-to-end encryption for calls, would not start.
+- **Requests with no body failed.** An empty PUT, POST, PATCH or DELETE still announced a
+  chunked body, and Discord could not parse it. Chunking is now only announced when a body
+  really follows.
+- **Attachments send again.** The upload presented itself as coming from
+  canary.discord.com instead of discord.com.
+- **The microphone was cut off before being asked for.** Chromium checks first, and only
+  asks the real question if that check says yes; that check refused anything to do with
+  sound. The camera is still refused.
+
+### Also
+- **A refused bot token says why.** The client showed "Unauthorized" and nothing else. It
+  now carries Discord's own message and the code it returned.
+
 ## v1.3.1 — Nebula becomes Voidcord
 
 The project changes its name. **Nebula is now called Voidcord**: same application, same

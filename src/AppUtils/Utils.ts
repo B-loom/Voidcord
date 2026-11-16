@@ -265,7 +265,7 @@ export default class Util {
         const electronReq = net.request({
             method: req.method as string,
             url: `https://canary.discord.com${req.originalUrl}`,
-            redirect: "follow",
+            redirect: "manual",
             useSessionCookies: true,
         });
 
@@ -277,25 +277,39 @@ export default class Util {
             "transfer-encoding",
             "upgrade",
             "origin",
+            "cookie",
             "referer",
         ];
 
         Object.entries(req.headers).forEach(([key, value]) => {
-            if (value && !skipHeaders.includes(key.toLowerCase())) {
+            const lowerKey = key.toLowerCase();
+            if (value && !skipHeaders.includes(lowerKey) && !lowerKey.startsWith("sec-")) {
                 try {
                     const headerValue = Array.isArray(value) ? value.join(", ") : value;
                     electronReq.setHeader(key, headerValue);
                 } catch {
-                    //
+                    // invalid header value, skip it
                 }
             }
         });
 
         // 3. Origin & Referer
-        electronReq.setHeader("Origin", "https://canary.discord.com");
-        electronReq.setHeader("Referer", "https://canary.discord.com/");
+        electronReq.setHeader("Origin", "https://discord.com");
+        electronReq.setHeader("Referer", "https://discord.com/");
 
-        // 4. Electron -> Express
+        /*
+         * 4. Le corps de la requête, pour les méthodes qui en portent un d'ordinaire.
+         *
+         * Le découpage en morceaux n'est annoncé que si un corps suit vraiment : annoncer
+         * un corps absent faisait échouer l'analyse côté Discord sur les PUT, POST, PATCH
+         * et DELETE vides.
+         */
+        const hasBody = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method.toUpperCase());
+        if (hasBody && parseInt((req.headers["content-length"] as string) ?? "0", 10) > 0) {
+            electronReq.chunkedEncoding = true;
+        }
+
+        // 5. Electron -> Express
         electronReq.on("response", electronRes => {
             res.status(electronRes.statusCode);
             const skipResHeaders = ["content-encoding", "content-length", "transfer-encoding"];
@@ -322,8 +336,8 @@ export default class Util {
             if (!res.headersSent) res.status(502).send({ error: err.message });
         });
 
-        // 5. Pipe request body (Express -> Electron)
-        if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+        // 6. Pipe request body (Express -> Electron)
+        if (hasBody) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             req.pipe(electronReq as any);
         } else {

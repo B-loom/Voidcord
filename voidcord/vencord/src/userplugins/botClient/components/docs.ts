@@ -147,6 +147,29 @@ Voidcord en est une modification personnelle, écrite avec Claude.
 
 export const CHANGELOG = `# Nouveautés
 
+## v1.3.2 — La base passe à DiscordBotClient 3.10.7
+
+Quatre correctifs du projet d'origine, tous publiés après la 3.10.3 sur laquelle
+Voidcord était fondée.
+
+- **Les polices manquantes et le chiffrement des appels.** Le mandataire local envoyait à
+  Discord des en-têtes qui ne lui étaient pas destinés — les témoins de connexion et les
+  en-têtes « sec- » du navigateur — et suivait les redirections de lui-même. Certaines
+  requêtes étaient abandonnées en chemin : des polices ne se chargeaient pas, et DAVE,
+  le chiffrement de bout en bout des appels, ne démarrait pas.
+- **Les requêtes sans corps échouaient.** Un PUT, POST, PATCH ou DELETE vide annonçait
+  quand même un corps découpé en morceaux, et Discord n'arrivait pas à le lire. Le
+  découpage n'est plus annoncé que si un corps suit vraiment.
+- **Les pièces jointes repartent.** L'envoi se présentait comme venant de canary.discord.com
+  au lieu de discord.com.
+- **Le micro était coupé avant d'être demandé.** Chromium interroge d'abord un contrôle,
+  et ne pose la vraie question que s'il répond oui ; ce contrôle refusait tout ce qui
+  touchait au son. La caméra, elle, reste refusée.
+
+### Aussi
+- **Un jeton de bot refusé dit pourquoi.** Le client affichait « Unauthorized », sans
+  plus. Il reprend désormais le message de Discord et le code renvoyé.
+
 ## v1.3.1 — Nebula devient Voidcord
 
 Le projet change de nom. **Nebula s'appelle désormais Voidcord** : même application,

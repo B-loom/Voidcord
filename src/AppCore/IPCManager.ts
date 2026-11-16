@@ -131,8 +131,16 @@ export function setupIPCEvents (mainApp: DiscordBotClient) {
                     "User-Agent": Constants.UserAgentDiscordBot,
                 },
             })
-            .then(res => {
-                if (!res.ok) throw new Error(res.statusText);
+            .then(async res => {
+                if (!res.ok) {
+                    /*
+                     * « Unauthorized » tout seul n'apprend rien. Discord dit pourquoi il
+                     * refuse : son message passe au client, qui l'affiche tel quel.
+                     */
+                    const erreur = (await res.json().catch(() => null)) as { message?: string; } | null;
+                    const message = erreur?.message || res.statusText || `HTTP ${res.status}`;
+                    throw new Error(`Erreur de l'API Discord [${res.status}] : ${message}`);
+                }
                 return res.json() as Promise<APIApplication>;
             })
             .then(data => {

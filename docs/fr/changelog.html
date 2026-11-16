@@ -19,7 +19,7 @@
     <a class="brand" href="index.html">
         <img src="../icon.png" alt="">
         <span>Voidcord</span>
-        <span class="version">v1.3.1</span>
+        <span class="version">v1.3.2</span>
     </a>
     <div class="nav-links"><a class="nav-link" href="index.html">Accueil</a><a class="nav-link" href="documentation.html">Documentation</a><a class="nav-link current" href="changelog.html">Nouveautés</a><a class="nav-link" href="licence.html">Licence</a></div>
     <a class="lang" href="../changelog.html" hreflang="en" lang="en">English</a>
@@ -27,6 +27,12 @@
 
 <main class="wrap">
 <article class="prose changelog"><h1>Nouveautés</h1>
+<h2>v1.3.2 — La base passe à DiscordBotClient 3.10.7</h2>
+<p>Quatre correctifs du projet d'origine, tous publiés après la 3.10.3 sur laquelle</p>
+<p>Voidcord était fondée.</p>
+<ul><li><strong>Les polices manquantes et le chiffrement des appels.</strong> Le mandataire local envoyait à Discord des en-têtes qui ne lui étaient pas destinés — les témoins de connexion et les en-têtes « sec- » du navigateur — et suivait les redirections de lui-même. Certaines requêtes étaient abandonnées en chemin : des polices ne se chargeaient pas, et DAVE, le chiffrement de bout en bout des appels, ne démarrait pas.</li><li><strong>Les requêtes sans corps échouaient.</strong> Un PUT, POST, PATCH ou DELETE vide annonçait quand même un corps découpé en morceaux, et Discord n'arrivait pas à le lire. Le découpage n'est plus annoncé que si un corps suit vraiment.</li><li><strong>Les pièces jointes repartent.</strong> L'envoi se présentait comme venant de canary.discord.com au lieu de discord.com.</li><li><strong>Le micro était coupé avant d'être demandé.</strong> Chromium interroge d'abord un contrôle, et ne pose la vraie question que s'il répond oui ; ce contrôle refusait tout ce qui touchait au son. La caméra, elle, reste refusée.</li></ul>
+<h3>Aussi</h3>
+<ul><li><strong>Un jeton de bot refusé dit pourquoi.</strong> Le client affichait « Unauthorized », sans plus. Il reprend désormais le message de Discord et le code renvoyé.</li></ul>
 <h2>v1.3.1 — Nebula devient Voidcord</h2>
 <p>Le projet change de nom. <strong>Nebula s'appelle désormais Voidcord</strong> : même application,</p>
 <p>même code, même dépôt — seul le nom change, partout où il était écrit. L'application,</p>

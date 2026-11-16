@@ -517,7 +517,7 @@ export class DiscordBotClient extends EventEmitter {
         await this.sessionPatch();
 
         this.logger.info(`Electron UserData: ${app.getPath("userData")}`);
-        const mainOrigin = `https://${Constants.CustomDiscordDomain}`;
+        const mainOrigin = new URL(`https://${Constants.CustomDiscordDomain}`).origin;
         const isMainOrigin = (url: string) => {
             try {
                 return new URL(url).origin === mainOrigin;
@@ -526,9 +526,13 @@ export class DiscordBotClient extends EventEmitter {
             }
         };
         this.discordSession.setPermissionRequestHandler((requester, permission, callback, details) => {
-            if (requester !== contents || !("requestingUrl" in details) || !isMainOrigin(details.requestingUrl)) {
+            if (!("requestingUrl" in details) || !isMainOrigin(details.requestingUrl)) {
                 return callback(false);
             }
+            // Les notifications viennent aussi des cadres secondaires de Discord
+            if (permission === "notifications") return callback(true);
+            if (requester !== contents || !details.isMainFrame) return callback(false);
+
             const decision = decidePermission(permission, details as { mediaTypes?: string[] });
             if (decision === "refuse") return callback(false);
             if (decision === "accorde") return callback(true);
@@ -539,11 +543,26 @@ export class DiscordBotClient extends EventEmitter {
             }
         });
         this.discordSession.setPermissionCheckHandler((requester, permission, origin, details) => {
-            if (origin !== mainOrigin) return false;
+            if (!isMainOrigin(origin)) return false;
             if (permission === "notifications") return true;
             if (requester !== contents || !details.isMainFrame) return false;
-            // Media checks must reach the request handler, where camera is rejected.
-            return ["fullscreen", "clipboard-sanitized-write", "loopback-network"].includes(permission);
+            if (["fullscreen", "clipboard-sanitized-write", "loopback-network"].includes(permission)) return true;
+            /*
+             * Le micro se demande en deux temps : Chromium interroge d'abord ce
+             * contrôle, et ne pose la vraie question que s'il répond oui. Répondre non
+             * ici — ce que faisait la version d'origine — coupait donc le micro avant
+             * même que le gestionnaire de demandes ne soit atteint. La caméra, elle,
+             * reste refusée.
+             */
+            if (permission === "media") {
+                if (details.mediaType !== "audio") return false;
+                if (process.platform === "darwin") {
+                    const status = systemPreferences.getMediaAccessStatus("microphone");
+                    return status !== "denied" && status !== "restricted";
+                }
+                return true;
+            }
+            return false;
         });
         contents.on("will-navigate", (event, url) => {
             if (!isMainOrigin(url)) return event.preventDefault();
